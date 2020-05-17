@@ -16,12 +16,22 @@ public interface GameRepository {
   Game create(Player creator);
 
   /**
-   * Get existing game by ID.
+   * Get game by ID.
    *
-   * @param id - if of the game.
-   * @return - optional which contains found game, if it was found, or empty.
+   * @param id - id of the game.
+   * @return - optional which contains found game or empty.
    */
   Optional<Game> find(String id);
+
+  /**
+   * Get game by ID and its owner. If game with specified ID is present but owner is different Optional.empty()
+   * will be returned.
+   *
+   * @param id      - id of the game.
+   * @param ownerId - id of the owner.
+   * @return - optional which contains found game or empty.
+   */
+  Optional<Game> findByIdAndOwnerId(String id, String ownerId);
 
   /**
    * Update game. ID of the game to update is taken from {@param updatedGame}

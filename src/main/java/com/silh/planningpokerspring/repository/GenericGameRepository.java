@@ -33,6 +33,12 @@ public class GenericGameRepository implements GameRepository {
   }
 
   @Override
+  public Optional<Game> findByIdAndOwnerId(String id, String ownerId) {
+    return Optional.ofNullable(games.get(id))
+                   .filter(game -> game.getCreator().getId().equals(ownerId));
+  }
+
+  @Override
   public Optional<Game> update(Game updatedGame) {
     return Optional.ofNullable(games.compute(updatedGame.getId(), (id, game) -> {
       if (game == null) {
