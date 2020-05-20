@@ -1,30 +1,85 @@
 package com.silh.planningpokerspring;
 
-import ch.qos.logback.core.joran.spi.EventPlayer;
 import lombok.Data;
 
-import java.util.List;
-import java.util.concurrent.CopyOnWriteArrayList;
+import java.util.HashMap;
+import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.atomic.AtomicReference;
 
 @Data
 public class Game {
-  private String id;
-  private Player creator;
-  private List<EventPlayer> participants;
-  private Round round = new Round();
-
-  public Game() {
-  }
+  private final String id;
+  private final Player creator;
+  private final Map<String, Player> participants = new ConcurrentHashMap<>();
+  private final Map<String, Long> votes = new ConcurrentHashMap<>();
+  private final AtomicReference<RoundState> state = new AtomicReference<>(RoundState.NOT_STARTED);
 
   public Game(String id, Player creator) {
     this.creator = creator;
     this.id = id;
-    participants = new CopyOnWriteArrayList<>();
   }
 
-  public Game(String id, Player creator, List<EventPlayer> participants) {
-    this.id = id;
-    this.creator = creator;
-    this.participants = participants;
+  /**
+   * Move game to the next state.
+   *
+   * @param nextState - state to which we move.
+   */
+  public void transitionTo(RoundState nextState) {
+    // Simple implementation, transition to any state is possible.
+    state.set(nextState);
+    if (nextState == RoundState.VOTING
+      || nextState == RoundState.NOT_STARTED) {
+      votes.clear();
+    }
+  }
+
+  /**
+   * Add participant to the game.
+   *
+   * @param player - new participant.
+   * @return - if participant was added.
+   */
+  public boolean addParticipant(Player player) {
+    return participants.putIfAbsent(player.getId(), player) == null;
+  }
+
+  /**
+   * Add vote of a player to votes.
+   *
+   * @param voterId - ID of a voting person.
+   * @param value   - vote value.
+   * @return - true if vote was accepted, false otherwise.
+   */
+  public boolean addVote(String voterId, Long value) {
+    //TODO check that player belongs to a game.
+    return votes.putIfAbsent(voterId, value) == null;
+  }
+
+  /**
+   * Get current game state unwrapped from AtomicReference.
+   *
+   * @return - current state of the game.
+   */
+  public RoundState getState() {
+    return state.get();
+  }
+
+  /**
+   * Returns a copy of participants.
+   *
+   * @return - copy of game's participants.
+   */
+  public Map<String, Player> getParticipants() {
+    return new HashMap<>(participants);
+  }
+
+  /**
+   * Returns a copy of the votes
+   *
+   * @return - copy of game's votes.
+   */
+  public Map<String, Long> getVotes() {
+    return new HashMap<>(votes);
   }
 }

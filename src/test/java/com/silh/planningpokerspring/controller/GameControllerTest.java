@@ -2,7 +2,6 @@ package com.silh.planningpokerspring.controller;
 
 import com.silh.planningpokerspring.Game;
 import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.Round;
 import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.dto.NewGameRequest;
 import com.silh.planningpokerspring.dto.TransitionRequest;
@@ -46,10 +45,6 @@ class GameControllerTest {
     assertThat(game.getId())
       .isNotNull()
       .isNotEmpty();
-    final Round round = game.getRound();
-    assertThat(round).isNotNull();
-    assertThat(round.getState().get()).isEqualTo(RoundState.NOT_STARTED);
-    assertThat(round.getVotes()).isEmpty();
     final Player creator = game.getCreator();
     assertThat(creator).isNotNull();
     assertThat(creator.getName()).isEqualTo(newGameRequest.getCreatorName());
@@ -62,6 +57,7 @@ class GameControllerTest {
     assertThat(getGameResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
     final Game gotGame = getGameResponse.getBody();
     assertThat(gotGame).isEqualTo(game);
+    //FIXME
   }
 
   @Test
@@ -80,6 +76,7 @@ class GameControllerTest {
       restTemplate.postForEntity(gameTransitionPath, new HttpEntity<>(transitionRequest, httpHeaders), Object.class);
     assertThat(updated.getStatusCode())
       .isEqualTo(HttpStatus.ACCEPTED);
+    //FIXME
   }
 
   private HttpHeaders getHttpHeaders(ResponseEntity<Game> response) {

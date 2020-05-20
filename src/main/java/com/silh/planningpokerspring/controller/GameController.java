@@ -1,7 +1,7 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.Game;
 import com.silh.planningpokerspring.Player;
+import com.silh.planningpokerspring.dto.GameDto;
 import com.silh.planningpokerspring.dto.NewGameRequest;
 import com.silh.planningpokerspring.dto.TransitionRequest;
 import com.silh.planningpokerspring.dto.VoteRequest;
@@ -28,7 +28,7 @@ public class GameController {
     produces = MediaType.APPLICATION_JSON_VALUE,
     consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  public ResponseEntity<Game> startGame(@RequestBody NewGameRequest req, HttpSession session) {
+  public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req, HttpSession session) {
     Player creator = new Player(session.getId(), req.getCreatorName());
     return ok().body(service.createGame(creator));
   }
@@ -37,10 +37,10 @@ public class GameController {
     value = "/{id}",
     produces = MediaType.APPLICATION_JSON_VALUE
   )
-  public ResponseEntity<Game> getGame(@PathVariable("id") String gameId) {
+  public ResponseEntity<GameDto> getGame(@PathVariable("id") String gameId) {
     return service.getGame(gameId)
-                  .map(game -> ok().body(game))
-                  .orElseGet(() -> notFound().build());
+      .map(game -> ok().body(game))
+      .orElseGet(() -> notFound().build());
   }
 
   @PostMapping(
@@ -50,17 +50,7 @@ public class GameController {
   public ResponseEntity<?> toNextState(@PathVariable("id") String gameId,
                                        @RequestBody TransitionRequest req,
                                        HttpSession session) {
-    boolean executed;
-    switch (req.getNextState()) {
-      case VOTING:
-        executed = service.startRound(gameId, session.getId());
-        break;
-      case DISCUSSION:
-        executed = false;
-        throw new IllegalArgumentException("not implemented");
-      default:
-        throw new IllegalArgumentException("not implemented");
-    }
+    boolean executed = service.transitionTo(gameId, session.getId(), req.getNextState());
     if (executed) {
       return accepted().build();
     }
