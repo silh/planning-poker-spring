@@ -8,6 +8,8 @@ import com.silh.planningpokerspring.dto.GameDto;
 import com.silh.planningpokerspring.repository.GameRepository;
 import org.junit.jupiter.api.Test;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -16,7 +18,9 @@ import static org.mockito.Mockito.when;
 
 class GenericGameServiceTest {
   private final GameRepository mockRepository = mock(GameRepository.class);
-  private final GenericGameService genericGameService = new GenericGameService(mockRepository, new GameConverterImpl());
+  private final List<GameEventSubscriber> subscribers = new ArrayList<>();
+  private final GenericGameService genericGameService =
+    new GenericGameService(mockRepository, new GameConverterImpl(), subscribers);
 
   @Test
   void canCreateGame() {
@@ -25,7 +29,7 @@ class GenericGameServiceTest {
     when(mockRepository.create(creator)).thenReturn(createdGame);
 
     final GameDto result = genericGameService.createGame(creator);
-    assertThat(result).satisfies(dto -> isGameDtoEqualToGame(dto, createdGame));
+    isGameDtoEqualToGame(result, createdGame);
   }
 
   @Test
@@ -82,6 +86,33 @@ class GenericGameServiceTest {
       genericGameService.transitionTo(expectedGame.getId(), creator.getId(), nextState);
     assertThat(transitioned).isTrue();
     assertThat(expectedGame.getState()).isEqualTo(nextState);
+  }
+
+  @Test
+  void canVote() {
+    final Player creator = new Player("1", "1");
+    final Game expectedGame = new Game("id", creator);
+    final Player voter = new Player("2", "voter");
+    expectedGame.addParticipant(voter);
+    when(mockRepository.find(expectedGame.getId()))
+      .thenReturn(Optional.of(expectedGame));
+
+    final boolean updated = genericGameService.vote(expectedGame.getId(), voter.getId(), 1L);
+    assertThat(updated).isTrue();
+    assertThat(expectedGame.getVotes()).containsEntry(voter.getId(), 1L);
+  }
+
+  @Test
+  void cantVoteIfNotParticipant() {
+    final Player creator = new Player("1", "1");
+    final Game expectedGame = new Game("id", creator);
+    final Player voter = new Player("2", "voter");
+    when(mockRepository.find(expectedGame.getId()))
+      .thenReturn(Optional.of(expectedGame));
+
+    final boolean updated = genericGameService.vote(expectedGame.getId(), voter.getId(), 1L);
+    assertThat(updated).isFalse();
+    assertThat(expectedGame.getVotes()).doesNotContainKey(voter.getId());
   }
 
   private static void isGameDtoEqualToGame(GameDto dto, Game game) {

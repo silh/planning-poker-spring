@@ -3,14 +3,12 @@ package com.silh.planningpokerspring.repository;
 import com.silh.planningpokerspring.Game;
 import com.silh.planningpokerspring.Player;
 import org.hashids.Hashids;
-import org.springframework.stereotype.Repository;
 
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
 
-@Repository
-public class GenericGameRepository implements GameRepository {
+public class ConcurrentHashMapGameRepository implements GameRepository {
 
   private final ConcurrentHashMap<String, Game> games = new ConcurrentHashMap<>();
   private final Hashids idGenerator = new Hashids("add some salt, per favore");
@@ -35,7 +33,7 @@ public class GenericGameRepository implements GameRepository {
   @Override
   public Optional<Game> findByIdAndOwnerId(String id, String ownerId) {
     return Optional.ofNullable(games.get(id))
-                   .filter(game -> game.getCreator().getId().equals(ownerId));
+      .filter(game -> game.getCreator().getId().equals(ownerId));
   }
 
   @Override
@@ -72,7 +70,7 @@ public class GenericGameRepository implements GameRepository {
   private String getNewId() {
     final ThreadLocalRandom random = ThreadLocalRandom.current();
     return idGenerator.encode(random.nextLong(Hashids.MAX_NUMBER),
-                              random.nextLong(Hashids.MAX_NUMBER),
-                              random.nextLong(Hashids.MAX_NUMBER));
+      random.nextLong(Hashids.MAX_NUMBER),
+      random.nextLong(Hashids.MAX_NUMBER));
   }
 }

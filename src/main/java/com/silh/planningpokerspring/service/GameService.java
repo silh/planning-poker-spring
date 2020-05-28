@@ -15,6 +15,8 @@ public interface GameService {
    */
   GameDto createGame(Player creator);
 
+  boolean joinGame(String gameId, Player player);
+
   boolean transitionTo(String gameId, String personId, RoundState nextState);
 
   boolean vote(String gameId, String voterId, Long value);

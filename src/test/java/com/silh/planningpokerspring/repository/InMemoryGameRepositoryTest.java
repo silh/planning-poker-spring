@@ -10,7 +10,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemoryGameRepositoryTest {
 
-  private final GameRepository gameRepository = new GenericGameRepository();
+  private final GameRepository gameRepository = new ConcurrentHashMapGameRepository();
 
   @Test
   void canCreateNewGame() {
