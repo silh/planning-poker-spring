@@ -1,4 +1,4 @@
-package com.silh.planningpokerspring.dto;
+package com.silh.planningpokerspring.request;
 
 import lombok.Data;
 

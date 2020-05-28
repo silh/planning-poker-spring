@@ -1,6 +1,5 @@
-package com.silh.planningpokerspring.dto;
+package com.silh.planningpokerspring.request;
 
-import com.silh.planningpokerspring.Player;
 import com.silh.planningpokerspring.RoundState;
 import lombok.AllArgsConstructor;
 import lombok.Data;
@@ -13,8 +12,8 @@ import java.util.Map;
 @NoArgsConstructor
 public class GameDto {
   private String id;
-  private Player creator;
+  private PlayerDto creator;
   private RoundState state;
-  private Map<String, Player> participants;
+  private Map<String, PlayerDto> participants;
   private Map<String, Long> votes;
 }

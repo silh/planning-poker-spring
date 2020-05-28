@@ -3,8 +3,8 @@ package com.silh.planningpokerspring.service;
 import com.silh.planningpokerspring.Player;
 import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.converter.GameConverter;
-import com.silh.planningpokerspring.dto.GameDto;
 import com.silh.planningpokerspring.repository.GameRepository;
+import com.silh.planningpokerspring.request.GameDto;
 
 import java.util.List;
 import java.util.Optional;

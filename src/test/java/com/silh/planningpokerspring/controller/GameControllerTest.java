@@ -1,16 +1,15 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.Game;
-import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.RoundState;
-import com.silh.planningpokerspring.dto.NewGameRequest;
-import com.silh.planningpokerspring.dto.TransitionRequest;
+import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
+import com.silh.planningpokerspring.request.PlayerDto;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
-import org.springframework.boot.test.web.client.TestRestTemplate;
 import org.springframework.boot.web.server.LocalServerPort;
 import org.springframework.http.*;
+import org.springframework.web.client.RestOperations;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -19,7 +18,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class GameControllerTest {
 
-  private final TestRestTemplate restTemplate = new TestRestTemplate();
+  private final RestOperations restTemplate = new RestTemplate();
   @LocalServerPort
   private int randomServerPort;
   private String baseUri;
@@ -36,50 +35,30 @@ class GameControllerTest {
   void canStartGame() {
     //Create a game
     final NewGameRequest newGameRequest = new NewGameRequest("harry");
-    final ResponseEntity<Game> response = restTemplate.postForEntity(gameApiPath, newGameRequest, Game.class);
+    final ResponseEntity<GameDto> response = restTemplate.postForEntity(gameApiPath, newGameRequest, GameDto.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
     //Check returned body
-    final Game game = response.getBody();
+    final GameDto game = response.getBody();
     assertThat(game).isNotNull();
     assertThat(game.getId())
       .isNotNull()
       .isNotEmpty();
-    final Player creator = game.getCreator();
+    final PlayerDto creator = game.getCreator();
     assertThat(creator).isNotNull();
     assertThat(creator.getName()).isEqualTo(newGameRequest.getCreatorName());
     final HttpHeaders httpHeaders = getHttpHeaders(response);
 
     //Check get
     String getGamePath = gameApiPath + "/" + game.getId();
-    final ResponseEntity<Game> getGameResponse =
-      restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(httpHeaders), Game.class);
+    final ResponseEntity<GameDto> getGameResponse =
+      restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(httpHeaders), GameDto.class);
     assertThat(getGameResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-    final Game gotGame = getGameResponse.getBody();
+    final GameDto gotGame = getGameResponse.getBody();
     assertThat(gotGame).isEqualTo(game);
-    //FIXME
   }
 
-  @Test
-  void canStartRound() {
-    //Create a game
-    final NewGameRequest newGameRequest = new NewGameRequest("harry");
-    final ResponseEntity<Game> response = restTemplate.postForEntity(gameApiPath, newGameRequest, Game.class);
-    final Game game = response.getBody();
-    assertThat(game).isNotNull();
-
-    //Start it
-    final HttpHeaders httpHeaders = getHttpHeaders(response);
-    final String gameTransitionPath = gameApiPath + "/" + game.getId() + "/advance";
-    final TransitionRequest transitionRequest = new TransitionRequest(RoundState.VOTING);
-    final ResponseEntity<Object> updated =
-      restTemplate.postForEntity(gameTransitionPath, new HttpEntity<>(transitionRequest, httpHeaders), Object.class);
-    assertThat(updated.getStatusCode())
-      .isEqualTo(HttpStatus.ACCEPTED);
-    //FIXME
-  }
-
-  private HttpHeaders getHttpHeaders(ResponseEntity<Game> response) {
+  private HttpHeaders getHttpHeaders(ResponseEntity<?> response) {
     // From now on we need JSESSIONID
     final List<String> cookies = response.getHeaders().get("Set-Cookie");
     assertThat(cookies)

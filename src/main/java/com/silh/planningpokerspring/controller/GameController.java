@@ -1,10 +1,10 @@
 package com.silh.planningpokerspring.controller;
 
 import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.dto.GameDto;
-import com.silh.planningpokerspring.dto.NewGameRequest;
-import com.silh.planningpokerspring.dto.TransitionRequest;
-import com.silh.planningpokerspring.dto.VoteRequest;
+import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
+import com.silh.planningpokerspring.request.TransitionRequest;
+import com.silh.planningpokerspring.request.VoteRequest;
 import com.silh.planningpokerspring.service.GameService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;

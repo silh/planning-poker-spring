@@ -1,4 +1,4 @@
-package com.silh.planningpokerspring.dto;
+package com.silh.planningpokerspring.request;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import com.fasterxml.jackson.annotation.JsonProperty;

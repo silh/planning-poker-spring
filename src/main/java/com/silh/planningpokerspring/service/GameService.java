@@ -2,7 +2,7 @@ package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.Player;
 import com.silh.planningpokerspring.RoundState;
-import com.silh.planningpokerspring.dto.GameDto;
+import com.silh.planningpokerspring.request.GameDto;
 
 import java.util.Optional;
 

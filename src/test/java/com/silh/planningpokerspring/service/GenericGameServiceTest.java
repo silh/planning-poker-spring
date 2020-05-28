@@ -4,8 +4,8 @@ import com.silh.planningpokerspring.Game;
 import com.silh.planningpokerspring.Player;
 import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.converter.GameConverterImpl;
-import com.silh.planningpokerspring.dto.GameDto;
 import com.silh.planningpokerspring.repository.GameRepository;
+import com.silh.planningpokerspring.request.GameDto;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
