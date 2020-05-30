@@ -8,5 +8,5 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 @NoArgsConstructor
 public class PlayerDto {
-  private String name;
+  private String name; //FIXME need player ID to be able to to match player and vote.
 }
