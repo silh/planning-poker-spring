@@ -5,11 +5,11 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 import lombok.Data;
 
 @Data
-public class NewGameRequest {
+public class JoinRequest {
   private final String name;
 
   @JsonCreator
-  public NewGameRequest(@JsonProperty("name") String name) {
+  public JoinRequest(@JsonProperty("name") String name) {
     this.name = name;
   }
 }

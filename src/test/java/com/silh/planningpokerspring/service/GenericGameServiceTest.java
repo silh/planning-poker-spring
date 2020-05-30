@@ -6,11 +6,14 @@ import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.converter.GameConverterImpl;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.PlayerDto;
 import org.junit.jupiter.api.Test;
 
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.mock;
@@ -119,9 +122,12 @@ class GenericGameServiceTest {
     assertThat(dto).isNotNull();
     assertThat(game).isNotNull();
     assertThat(dto.getId()).isEqualTo(game.getId());
-    assertThat(dto.getCreator()).isEqualTo(game.getCreator());
+    assertThat(dto.getCreator().getName()).isEqualTo(game.getCreator().getName());
     assertThat(dto.getState()).isEqualTo(game.getState());
-    assertThat(dto.getParticipants()).isEqualTo(game.getParticipants());
+    final Map<String, PlayerDto> participants = game.getParticipants()
+      .entrySet().stream()
+      .collect(Collectors.toMap(Map.Entry::getKey, entry -> new PlayerDto(entry.getValue().getName())));
+    assertThat(dto.getParticipants()).isEqualTo(participants);
     assertThat(dto.getVotes()).isEqualTo(game.getVotes());
   }
 }

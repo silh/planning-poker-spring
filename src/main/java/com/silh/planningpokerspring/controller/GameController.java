@@ -1,10 +1,7 @@
 package com.silh.planningpokerspring.controller;
 
 import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.request.GameDto;
-import com.silh.planningpokerspring.request.NewGameRequest;
-import com.silh.planningpokerspring.request.TransitionRequest;
-import com.silh.planningpokerspring.request.VoteRequest;
+import com.silh.planningpokerspring.request.*;
 import com.silh.planningpokerspring.service.GameService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +26,7 @@ public class GameController {
     consumes = MediaType.APPLICATION_JSON_VALUE
   )
   public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req, HttpSession session) {
-    Player creator = new Player(session.getId(), req.getCreatorName());
+    Player creator = new Player(session.getId(), req.getName());
     return ok().body(service.createGame(creator));
   }
 
@@ -52,6 +49,20 @@ public class GameController {
                                        HttpSession session) {
     boolean executed = service.transitionTo(gameId, session.getId(), req.getNextState());
     if (executed) {
+      return accepted().build();
+    }
+    return badRequest().build();
+  }
+
+  @PostMapping(
+    consumes = MediaType.APPLICATION_JSON_VALUE,
+    value = "/{id}/join"
+  )
+  public ResponseEntity<?> join(@PathVariable("id") String gameId,
+                                @RequestBody JoinRequest joinRequest,
+                                HttpSession session) {
+    final boolean joined = service.joinGame(gameId, new Player(session.getId(), joinRequest.getName()));
+    if (joined) {
       return accepted().build();
     }
     return badRequest().build();
