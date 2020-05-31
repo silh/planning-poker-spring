@@ -1,6 +1,6 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.RoundState;
+import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.request.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -59,7 +59,7 @@ class GameControllerTest {
     assertThat(getGameResponse.getBody()).isEqualTo(initialGame);
 
     //Start
-    final TransitionRequest start = new TransitionRequest(RoundState.VOTING);
+    final TransitionRequest start = new TransitionRequest(GameState.VOTING);
     final ResponseEntity<Object> startedResp = restTemplate.postForEntity(
       gameApiPath + "/" + initialGame.getId() + "/advance",
       new HttpEntity<>(start, creatorHeaders),
@@ -67,7 +67,7 @@ class GameControllerTest {
     );
     assertThat(startedResp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     //Check game
-    initialGame.setState(RoundState.VOTING);
+    initialGame.setState(GameState.VOTING);
     final ResponseEntity<GameDto> votingGameResponse =
       restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(creatorHeaders), GameDto.class);
     assertThat(votingGameResponse.getBody()).isEqualTo(initialGame);

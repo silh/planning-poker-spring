@@ -1,7 +1,7 @@
 package com.silh.planningpokerspring.service;
 
-import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.RoundState;
+import com.silh.planningpokerspring.domain.GameState;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.GameDto;
 
 import java.util.Optional;
@@ -17,7 +17,7 @@ public interface GameService {
 
   boolean joinGame(String gameId, Player player);
 
-  boolean transitionTo(String gameId, String personId, RoundState nextState);
+  boolean transitionTo(String gameId, String personId, GameState nextState);
 
   boolean vote(String gameId, String voterId, Long value);
 

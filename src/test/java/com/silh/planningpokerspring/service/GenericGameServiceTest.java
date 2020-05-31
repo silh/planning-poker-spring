@@ -1,9 +1,9 @@
 package com.silh.planningpokerspring.service;
 
-import com.silh.planningpokerspring.Game;
-import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.converter.GameConverterImpl;
+import com.silh.planningpokerspring.domain.Game;
+import com.silh.planningpokerspring.domain.GameState;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.PlayerDto;
@@ -84,7 +84,7 @@ class GenericGameServiceTest {
     when(mockRepository.findByIdAndOwnerId(expectedGame.getId(), creator.getId()))
       .thenReturn(Optional.of(expectedGame));
 
-    final RoundState nextState = RoundState.VOTING;
+    final GameState nextState = GameState.VOTING;
     final boolean transitioned =
       genericGameService.transitionTo(expectedGame.getId(), creator.getId(), nextState);
     assertThat(transitioned).isTrue();

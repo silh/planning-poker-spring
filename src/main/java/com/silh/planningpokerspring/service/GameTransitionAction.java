@@ -1,6 +1,6 @@
 package com.silh.planningpokerspring.service;
 
-import com.silh.planningpokerspring.Game;
+import com.silh.planningpokerspring.domain.Game;
 
 import java.util.function.Function;
 

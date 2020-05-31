@@ -1,8 +1,8 @@
 package com.silh.planningpokerspring.service;
 
-import com.silh.planningpokerspring.Player;
-import com.silh.planningpokerspring.RoundState;
 import com.silh.planningpokerspring.converter.GameConverter;
+import com.silh.planningpokerspring.domain.GameState;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.request.GameDto;
 
@@ -46,7 +46,7 @@ public class GenericGameService implements GameService {
   }
 
   @Override
-  public boolean transitionTo(String gameId, String personId, RoundState nextState) {
+  public boolean transitionTo(String gameId, String personId, GameState nextState) {
     final Boolean updated = repository
       .findByIdAndOwnerId(gameId, personId)
       .map(game -> {

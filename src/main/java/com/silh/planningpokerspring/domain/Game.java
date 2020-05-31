@@ -1,4 +1,4 @@
-package com.silh.planningpokerspring;
+package com.silh.planningpokerspring.domain;
 
 import lombok.Data;
 
@@ -13,7 +13,7 @@ public class Game {
   private final Player creator;
   private final Map<String, Player> participants = new ConcurrentHashMap<>();
   private final Map<String, Long> votes = new ConcurrentHashMap<>();
-  private final AtomicReference<RoundState> state = new AtomicReference<>(RoundState.NOT_STARTED);
+  private final AtomicReference<GameState> state = new AtomicReference<>(GameState.NOT_STARTED);
 
   public Game(String id, Player creator) {
     this.creator = creator;
@@ -25,11 +25,11 @@ public class Game {
    *
    * @param nextState - state to which we move.
    */
-  public void transitionTo(RoundState nextState) {
+  public void transitionTo(GameState nextState) {
     // Simple implementation, transition to any state is possible.
     state.set(nextState);
-    if (nextState == RoundState.VOTING
-      || nextState == RoundState.NOT_STARTED) {
+    if (nextState == GameState.VOTING
+      || nextState == GameState.NOT_STARTED) {
       votes.clear();
     }
   }
@@ -61,7 +61,7 @@ public class Game {
    *
    * @return - current state of the game.
    */
-  public RoundState getState() {
+  public GameState getState() {
     return state.get();
   }
 

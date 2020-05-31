@@ -1,4 +1,4 @@
-package com.silh.planningpokerspring;
+package com.silh.planningpokerspring.domain;
 
 import com.fasterxml.jackson.annotation.JsonCreator;
 import lombok.Data;

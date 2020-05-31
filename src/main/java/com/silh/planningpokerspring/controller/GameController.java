@@ -1,6 +1,6 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.Player;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.*;
 import com.silh.planningpokerspring.service.GameService;
 import org.springframework.http.MediaType;

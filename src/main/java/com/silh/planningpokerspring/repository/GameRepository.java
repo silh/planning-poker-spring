@@ -1,7 +1,7 @@
 package com.silh.planningpokerspring.repository;
 
-import com.silh.planningpokerspring.Game;
-import com.silh.planningpokerspring.Player;
+import com.silh.planningpokerspring.domain.Game;
+import com.silh.planningpokerspring.domain.Player;
 
 import java.util.Optional;
 

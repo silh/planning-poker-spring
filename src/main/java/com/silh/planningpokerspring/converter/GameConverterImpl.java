@@ -1,7 +1,7 @@
 package com.silh.planningpokerspring.converter;
 
-import com.silh.planningpokerspring.Game;
-import com.silh.planningpokerspring.Player;
+import com.silh.planningpokerspring.domain.Game;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.PlayerDto;
 import org.springframework.lang.Nullable;
