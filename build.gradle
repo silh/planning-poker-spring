@@ -20,7 +20,7 @@ repositories {
 }
 
 ext {
-  assertjVersion = '3.18.1'
+  assertjVersion = '3.19.0'
   findBugsVersion = '3.0.2'
   hashidsVersion = '1.0.3'
 }
