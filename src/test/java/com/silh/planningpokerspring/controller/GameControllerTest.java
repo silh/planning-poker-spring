@@ -24,13 +24,11 @@ class GameControllerTest {
   private final RestOperations restTemplate = new RestTemplate();
   @LocalServerPort
   private int randomServerPort;
-  private String baseUri;
   private String gameApiPath;
 
   @BeforeEach
   void setUp() {
-    baseUri = "http://localhost:" + randomServerPort;
-    gameApiPath = baseUri + "/api/game";
+    gameApiPath = "http://localhost:" + randomServerPort + "/api/game";
   }
 
   @Test
