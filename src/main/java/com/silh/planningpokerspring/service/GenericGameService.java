@@ -9,6 +9,9 @@ import com.silh.planningpokerspring.request.GameDto;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ *
+ */
 public class GenericGameService implements GameService {
 
   private final GameRepository repository;

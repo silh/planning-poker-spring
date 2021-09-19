@@ -121,13 +121,13 @@ class GenericGameServiceTest {
   private static void isGameDtoEqualToGame(GameDto dto, Game game) {
     assertThat(dto).isNotNull();
     assertThat(game).isNotNull();
-    assertThat(dto.getId()).isEqualTo(game.getId());
-    assertThat(dto.getCreator().getName()).isEqualTo(game.getCreator().getName());
-    assertThat(dto.getState()).isEqualTo(game.getState());
+    assertThat(dto.id()).isEqualTo(game.getId());
+    assertThat(dto.creator().name()).isEqualTo(game.getCreator().getName());
+    assertThat(dto.state()).isEqualTo(game.getState());
     final Map<String, PlayerDto> participants = game.getParticipants()
       .entrySet().stream()
       .collect(Collectors.toMap(Map.Entry::getKey, entry -> new PlayerDto(entry.getValue().getName())));
-    assertThat(dto.getParticipants()).isEqualTo(participants);
-    assertThat(dto.getVotes()).isEqualTo(game.getVotes());
+    assertThat(dto.participants()).isEqualTo(participants);
+    assertThat(dto.votes()).isEqualTo(game.getVotes());
   }
 }

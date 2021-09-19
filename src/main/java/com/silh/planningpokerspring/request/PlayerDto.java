@@ -1,12 +1,7 @@
 package com.silh.planningpokerspring.request;
 
-import lombok.AllArgsConstructor;
-import lombok.Data;
-import lombok.NoArgsConstructor;
+import com.fasterxml.jackson.annotation.JsonProperty;
 
-@Data
-@AllArgsConstructor
-@NoArgsConstructor
-public class PlayerDto {
-  private String name; //FIXME need player ID to be able to to match player and vote.
+//FIXME need player ID to be able to to match player and vote.
+public record PlayerDto(@JsonProperty("name") String name) {
 }

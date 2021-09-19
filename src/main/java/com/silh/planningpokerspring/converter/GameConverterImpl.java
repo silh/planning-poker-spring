@@ -22,15 +22,13 @@ public class GameConverterImpl implements GameConverter {
     if (game == null) {
       return null;
     }
-    final GameDto gameDto = new GameDto();
-    gameDto.setId(game.getId());
-    gameDto.setCreator(toPlayerDto(game.getCreator()));
-    gameDto.setState(game.getState());
-    final Map<String, PlayerDto> participants = convertParticipants(game);
-    gameDto.setParticipants(participants);
-    gameDto.setVotes(game.getVotes());
-
-    return gameDto;
+    return new GameDto(
+      game.getId(),
+      toPlayerDto(game.getCreator()),
+      game.getState(),
+      convertParticipants(game),
+      game.getVotes()
+    );
   }
 
   private static Map<String, PlayerDto> convertParticipants(Game game) {
