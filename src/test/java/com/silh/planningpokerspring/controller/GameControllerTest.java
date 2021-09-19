@@ -42,41 +42,48 @@ class GameControllerTest {
 
     //Check returned body
     final GameDto initialGame = response.getBody();
+    var expected = initialGame; // at first, they are equal
     assertThat(initialGame).isNotNull();
-    assertThat(initialGame.getId())
+    assertThat(initialGame.id())
       .isNotNull()
       .isNotEmpty();
-    final PlayerDto creator = initialGame.getCreator();
+    final PlayerDto creator = initialGame.creator();
     assertThat(creator).isNotNull();
-    assertThat(creator.getName()).isEqualTo(newGameRequest.getName());
+    assertThat(creator.name()).isEqualTo(newGameRequest.name());
     final HttpHeaders creatorHeaders = getHttpHeaders(response);
 
     //Check game
-    String getGamePath = gameApiPath + "/" + initialGame.getId();
+    String getGamePath = gameApiPath + "/" + expected.id();
     final ResponseEntity<GameDto> getGameResponse =
       restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(creatorHeaders), GameDto.class);
     assertThat(getGameResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(getGameResponse.getBody()).isEqualTo(initialGame);
+    assertThat(getGameResponse.getBody()).isEqualTo(expected);
 
     //Start
     final TransitionRequest start = new TransitionRequest(GameState.VOTING);
     final ResponseEntity<Object> startedResp = restTemplate.postForEntity(
-      gameApiPath + "/" + initialGame.getId() + "/advance",
+      gameApiPath + "/" + expected.id() + "/advance",
       new HttpEntity<>(start, creatorHeaders),
       Object.class
     );
     assertThat(startedResp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
     //Check game
-    initialGame.setState(GameState.VOTING);
+    expected = new GameDto(
+      expected.id(),
+      expected.creator(),
+      GameState.VOTING,
+      expected.participants(),
+      expected.votes()
+    );
     final ResponseEntity<GameDto> votingGameResponse =
       restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(creatorHeaders), GameDto.class);
-    assertThat(votingGameResponse.getBody()).isEqualTo(initialGame);
+    assertThat(votingGameResponse.getBody()).isEqualTo(expected);
 
     // Join
     final String playerName = "joiner";
     final JoinRequest joinRequest = new JoinRequest(playerName);
     final ResponseEntity<Object> joinedGameResp = restTemplate.postForEntity(
-      gameApiPath + "/" + initialGame.getId() + "/join",
+      gameApiPath + "/" + expected.id() + "/join",
       joinRequest,
       Object.class
     );
@@ -85,26 +92,26 @@ class GameControllerTest {
 
     //Check game
     final String playerSessionId = getSessionId(joinedGameResp);
-    initialGame.getParticipants().put(playerSessionId, new PlayerDto(playerName));
+    expected.participants().put(playerSessionId, new PlayerDto(playerName));
     final ResponseEntity<GameDto> joinedGameCheckResp =
       restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(playerHeaders), GameDto.class);
-    assertThat(joinedGameCheckResp.getBody()).isEqualTo(initialGame);
+    assertThat(joinedGameCheckResp.getBody()).isEqualTo(expected);
 
     //Participant can vote
     final long voteValue = 1L;
     final VoteRequest voteRequest = new VoteRequest(voteValue);
     final ResponseEntity<Object> votedResponse = restTemplate.postForEntity(
-      gameApiPath + "/" + initialGame.getId() + "/vote",
+      gameApiPath + "/" + initialGame.id() + "/vote",
       new HttpEntity<>(voteRequest, playerHeaders),
       Object.class
     );
     assertThat(votedResponse.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
     //Check game
-    initialGame.getVotes().put(playerSessionId, voteValue);
+    initialGame.votes().put(playerSessionId, voteValue); // FIXME should not be able to do that
     final ResponseEntity<GameDto> votedGame =
       restTemplate.exchange(getGamePath, HttpMethod.GET, new HttpEntity<>(playerHeaders), GameDto.class);
-    assertThat(votedGame.getBody()).isEqualTo(initialGame);
+    assertThat(votedGame.getBody()).isEqualTo(expected);
   }
 
   private static HttpHeaders getHttpHeaders(ResponseEntity<?> response) {

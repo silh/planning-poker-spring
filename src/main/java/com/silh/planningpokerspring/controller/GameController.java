@@ -26,7 +26,7 @@ public class GameController {
     consumes = MediaType.APPLICATION_JSON_VALUE
   )
   public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req, HttpSession session) {
-    Player creator = new Player(session.getId(), req.getName());
+    Player creator = new Player(session.getId(), req.name());
     return ok().body(service.createGame(creator));
   }
 
@@ -47,7 +47,7 @@ public class GameController {
   public ResponseEntity<?> toNextState(@PathVariable("id") String gameId,
                                        @RequestBody TransitionRequest req,
                                        HttpSession session) {
-    boolean executed = service.transitionTo(gameId, session.getId(), req.getNextState());
+    boolean executed = service.transitionTo(gameId, session.getId(), req.nextState());
     if (executed) {
       return accepted().build();
     }
@@ -61,7 +61,7 @@ public class GameController {
   public ResponseEntity<?> join(@PathVariable("id") String gameId,
                                 @RequestBody JoinRequest joinRequest,
                                 HttpSession session) {
-    final boolean joined = service.joinGame(gameId, new Player(session.getId(), joinRequest.getName()));
+    final boolean joined = service.joinGame(gameId, new Player(session.getId(), joinRequest.name()));
     if (joined) {
       return accepted().build();
     }
@@ -75,7 +75,7 @@ public class GameController {
   public ResponseEntity<?> vote(@PathVariable("id") String gameId,
                                 @RequestBody VoteRequest request,
                                 HttpSession session) {
-    final boolean accepted = service.vote(gameId, session.getId(), request.getValue());
+    final boolean accepted = service.vote(gameId, session.getId(), request.value());
     if (accepted) {
       return accepted().build();
     }
