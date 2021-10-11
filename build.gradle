@@ -12,6 +12,10 @@ configurations {
   compileOnly {
     extendsFrom annotationProcessor
   }
+  developmentOnly
+  runtimeClasspath {
+    extendsFrom developmentOnly
+  }
 }
 
 repositories {
@@ -25,6 +29,8 @@ ext {
 }
 
 dependencies {
+  developmentOnly 'org.springframework.boot:spring-boot-devtools'
+
   implementation 'org.springframework.boot:spring-boot-starter-web'
   implementation 'org.springframework.boot:spring-boot-starter-websocket'
   implementation 'org.springframework.session:spring-session-core'
@@ -45,13 +51,32 @@ test {
 }
 
 task dockerBuild(type: Exec) {
-  commandLine "docker", "build", "-t", "planning-poker:latest", "."
+  doLast {
+    commandLine "docker", "build", "-t", "planning-poker:latest", "."
+  }
 }
 
 task dockerRun(type: Exec) {
-  commandLine "docker", "run", "-e", "LOGGING_LEVEL_ROOT=debug", "-p", "8080:8080", "--name", "poker", "-d", "--rm", "planning-poker"
+  doLast {
+    commandLine "docker", "run", "-e", "LOGGING_LEVEL_ROOT=debug", "-p", "8080:8080", "--name", "poker", "-d", "--rm", "planning-poker"
+  }
 }
 
 task dockerStop(type: Exec) {
-  commandLine "docker", "stop", "poker"
+  doLast {
+    commandLine "docker", "stop", "poker"
+  }
+}
+
+// For pattern matching
+tasks.withType(JavaCompile) {
+  options.compilerArgs += "--enable-preview"
+}
+
+tasks.withType(Test) {
+  jvmArgs += "--enable-preview"
+}
+
+tasks.withType(JavaExec) {
+  jvmArgs += '--enable-preview'
 }

@@ -10,7 +10,7 @@ import java.util.List;
 import java.util.Optional;
 
 /**
- *
+ * This class is responsible for all things related to managing running games of planign poker.
  */
 public class GenericGameService implements GameService {
 
