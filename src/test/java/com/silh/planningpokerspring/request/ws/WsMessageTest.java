@@ -16,14 +16,14 @@ class WsMessageTest {
       {
         "channel" : "join",
         "data" : {
-          "name": "user"
+          "gameId": "id"
         }
       }
       """;
     final WsMessage<?> wsMessage = objectMapper.readValue(json, WsMessage.class);
-    assertThat(wsMessage).isInstanceOf(WsMessage.JoinMessage.class);
+    assertThat(wsMessage).isInstanceOf(JoinMessage.class);
     assertThat(wsMessage.getChannel()).isEqualTo(IncomingChannel.JOIN);
-    assertThat(wsMessage.getData()).isEqualTo(new JoinMessageData("user"));
+    assertThat(wsMessage.getData()).isEqualTo(new JoinMessageData("id"));
   }
 
   @Test
@@ -37,7 +37,7 @@ class WsMessageTest {
       }
       """;
     final WsMessage<?> wsMessage = objectMapper.readValue(json, WsMessage.class);
-    assertThat(wsMessage).isInstanceOf(WsMessage.VoteMessage.class);
+    assertThat(wsMessage).isInstanceOf(VoteMessage.class);
     assertThat(wsMessage.getChannel()).isEqualTo(IncomingChannel.VOTE);
     assertThat(wsMessage.getData()).isEqualTo(new VoteMessageData(1L));
   }

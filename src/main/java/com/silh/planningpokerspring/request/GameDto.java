@@ -4,6 +4,9 @@ import com.silh.planningpokerspring.domain.GameState;
 
 import java.util.Map;
 
+/**
+ * Represents game state returned as a response.
+ */
 public record GameDto(
   String id,
   PlayerDto creator,

@@ -21,7 +21,7 @@ import static org.mockito.Mockito.when;
 
 class GenericGameServiceTest {
   private final GameRepository mockRepository = mock(GameRepository.class);
-  private final List<GameEventSubscriber> subscribers = new ArrayList<>();
+  private final List<GameEventsSubscriber> subscribers = new ArrayList<>();
   private final GenericGameService genericGameService =
     new GenericGameService(mockRepository, new GameConverterImpl(), subscribers);
 

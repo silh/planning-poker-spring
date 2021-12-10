@@ -6,7 +6,7 @@ import com.silh.planningpokerspring.converter.GameConverter;
 import com.silh.planningpokerspring.converter.GameConverterImpl;
 import com.silh.planningpokerspring.repository.ConcurrentHashMapGameRepository;
 import com.silh.planningpokerspring.repository.GameRepository;
-import com.silh.planningpokerspring.service.GameEventSubscriber;
+import com.silh.planningpokerspring.service.GameEventsSubscriber;
 import com.silh.planningpokerspring.service.GameService;
 import com.silh.planningpokerspring.service.GenericGameService;
 import com.silh.planningpokerspring.service.NoOpGameEventSubscriber;
@@ -33,12 +33,12 @@ public class PokerConfig {
   }
 
   @Bean
-  public GameEventSubscriber noOpGameEventSubscriber() {
+  public GameEventsSubscriber noOpGameEventSubscriber() {
     return new NoOpGameEventSubscriber();
   }
 
   @Bean
-  public GameService gameService(List<GameEventSubscriber> gameEventSubscribers) {
+  public GameService gameService(List<GameEventsSubscriber> gameEventSubscribers) {
     return new GenericGameService(gameRepository(), gameConverter(), gameEventSubscribers);
   }
 

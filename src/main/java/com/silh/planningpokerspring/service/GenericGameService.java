@@ -16,11 +16,11 @@ public class GenericGameService implements GameService {
 
   private final GameRepository repository;
   private final GameConverter gameConverter;
-  private final List<GameEventSubscriber> subscribers;
+  private final List<GameEventsSubscriber> subscribers;
 
   public GenericGameService(GameRepository repository,
                             GameConverter gameConverter,
-                            List<GameEventSubscriber> subscribers) {
+                            List<GameEventsSubscriber> subscribers) {
     this.repository = repository;
     this.gameConverter = gameConverter;
     this.subscribers = subscribers;
@@ -73,7 +73,9 @@ public class GenericGameService implements GameService {
 
   private void notifySubscribers(Boolean updated, String gameId) {
     if (updated) {
-      subscribers.forEach(subscriber -> subscriber.notify(gameId));
+      repository.find(gameId)
+        .map(gameConverter::convert)
+        .ifPresent(gameDto -> subscribers.forEach(subscriber -> subscriber.notify(gameId, gameDto)));
     }
   }
 }
