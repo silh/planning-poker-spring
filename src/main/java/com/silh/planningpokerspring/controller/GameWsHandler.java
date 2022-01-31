@@ -13,7 +13,10 @@ import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.util.Set;
-import java.util.concurrent.*;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 
 /**
  * Responsible for sending game state update events to the client.
@@ -29,9 +32,9 @@ public class GameWsHandler extends TextWebSocketHandler
   // FIXME this is ugly, find a better way to do that
   private final ScheduledExecutorService executorService;
 
-  public GameWsHandler(ObjectMapper objectMapper) {
+  public GameWsHandler(ObjectMapper objectMapper, ScheduledExecutorService executorService) {
     this.objectMapper = objectMapper;
-    executorService = Executors.newSingleThreadScheduledExecutor();
+    this.executorService = executorService;
   }
 
   @Override
@@ -66,23 +69,26 @@ public class GameWsHandler extends TextWebSocketHandler
   public void notify(@NonNull String gameId, @NonNull GameDto gameDto) {
     pendingNotifications.compute(gameId, (key, value) -> {
       if (value == null) {
-        executorService.schedule(() -> {
-          final Set<WebSocketSession> webSocketSessions = gameIdToParticipants.get(gameId);
-          if (webSocketSessions == null) {
-            return;
-          }
-          for (WebSocketSession webSocketSession : webSocketSessions) {
-            try {
-              final byte[] bytes = objectMapper.writeValueAsBytes(gameDto);
-              webSocketSession.sendMessage(new TextMessage(bytes));
-            } catch (Exception e) {
-              log.error("Wasn't able to send update to {}: ", webSocketSession.getRemoteAddress(), e);
-            }
-          }
-        }, 1L, TimeUnit.SECONDS); // TODO don't hardcode
+        executorService.schedule(() -> notifyGameParticipants(gameId), 1L, TimeUnit.SECONDS); // TODO don't hardcode
       }
       return gameDto;
     });
+  }
+
+  private void notifyGameParticipants(String gameId) {
+    final Set<WebSocketSession> webSocketSessions = gameIdToParticipants.get(gameId);
+    final var gameDto = pendingNotifications.remove(gameId);
+    if (webSocketSessions == null || gameDto == null) {
+      return;
+    }
+    for (WebSocketSession webSocketSession : webSocketSessions) {
+      try {
+        final byte[] bytes = objectMapper.writeValueAsBytes(gameDto);
+        webSocketSession.sendMessage(new TextMessage(bytes));
+      } catch (Exception e) {
+        log.warn("Wasn't able to send update to {}: ", webSocketSession.getRemoteAddress(), e);
+      }
+    }
   }
 
 }

@@ -15,6 +15,7 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
+import java.util.concurrent.Executors;
 
 @AllArgsConstructor
 @Configuration(proxyBeanMethods = false)
@@ -44,6 +45,6 @@ public class PokerConfig {
 
   @Bean
   public GameWsHandler gameWsHandler() {
-    return new GameWsHandler(objectMapper);
+    return new GameWsHandler(objectMapper, Executors.newSingleThreadScheduledExecutor());
   }
 }

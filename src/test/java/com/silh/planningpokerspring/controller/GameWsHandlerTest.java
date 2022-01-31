@@ -9,6 +9,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
 import java.util.Collections;
+import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
 import static org.mockito.ArgumentMatchers.any;
@@ -21,7 +22,7 @@ class GameWsHandlerTest {
 
   @Test
   void connectAndReceiveNotifications() throws Exception {
-    final var gameWsHandler = new GameWsHandler(OBJECT_MAPPER);
+    final var gameWsHandler = new GameWsHandler(OBJECT_MAPPER, Executors.newSingleThreadScheduledExecutor());
     final var webSocketSession = mock(WebSocketSession.class);
     final var textMessage = new TextMessage("""
       {
@@ -37,7 +38,7 @@ class GameWsHandlerTest {
     final var gameDto = gameDto(gameId);
     gameWsHandler.notify(gameId, gameDto);
 
-    TimeUnit.SECONDS.sleep(2); // this works but it is slow, better separate those things.
+    TimeUnit.SECONDS.sleep(2); // this works, but it is slow, better separate those things.
     verify(webSocketSession).sendMessage(any(TextMessage.class));
   }
 
