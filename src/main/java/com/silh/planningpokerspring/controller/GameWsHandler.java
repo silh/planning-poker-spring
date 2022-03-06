@@ -12,6 +12,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.time.Duration;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -31,10 +32,12 @@ public class GameWsHandler extends TextWebSocketHandler
   private final ConcurrentMap<String, GameDto> pendingNotifications = new ConcurrentHashMap<>();
   // FIXME this is ugly, find a better way to do that
   private final ScheduledExecutorService executorService;
+  private final Duration sendDelay;
 
-  public GameWsHandler(ObjectMapper objectMapper, ScheduledExecutorService executorService) {
+  public GameWsHandler(ObjectMapper objectMapper, ScheduledExecutorService executorService, Duration sendDelay) {
     this.objectMapper = objectMapper;
     this.executorService = executorService;
+    this.sendDelay = sendDelay;
   }
 
   @Override
@@ -66,29 +69,30 @@ public class GameWsHandler extends TextWebSocketHandler
    * Puts a notification into pending notifications to be processed at some time in the future.
    */
   @Override
-  public void notify(@NonNull String gameId, @NonNull GameDto gameDto) {
-    pendingNotifications.compute(gameId, (key, value) -> {
+  public void notify(@NonNull GameDto gameDto) {
+    pendingNotifications.compute(gameDto.id(), (key, value) -> {
       if (value == null) {
-        executorService.schedule(() -> notifyGameParticipants(gameId), 1L, TimeUnit.SECONDS); // TODO don't hardcode
+        executorService.schedule(() -> notifyGameParticipants(gameDto.id()), sendDelay.toMillis(), TimeUnit.MILLISECONDS);
       }
       return gameDto;
     });
   }
 
   private void notifyGameParticipants(String gameId) {
-    final Set<WebSocketSession> webSocketSessions = gameIdToParticipants.get(gameId);
-    final var gameDto = pendingNotifications.remove(gameId);
-    if (webSocketSessions == null || gameDto == null) {
-      return;
-    }
-    for (WebSocketSession webSocketSession : webSocketSessions) {
-      try {
-        final byte[] bytes = objectMapper.writeValueAsBytes(gameDto);
-        webSocketSession.sendMessage(new TextMessage(bytes));
-      } catch (Exception e) {
-        log.warn("Wasn't able to send update to {}: ", webSocketSession.getRemoteAddress(), e);
+    gameIdToParticipants.compute(gameId, (id, webSocketSessions) -> {
+      final var gameDto = pendingNotifications.remove(gameId);
+      if (webSocketSessions == null || gameDto == null) {
+        return webSocketSessions;
       }
-    }
+      for (WebSocketSession webSocketSession : webSocketSessions) {
+        try {
+          webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsBytes(gameDto)));
+        } catch (Exception e) {
+          log.warn("Wasn't able to send update to {}: ", webSocketSession.getRemoteAddress(), e);
+        }
+      }
+      return webSocketSessions;
+    });
   }
 
 }

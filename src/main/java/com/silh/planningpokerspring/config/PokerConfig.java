@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
 import java.util.List;
 import java.util.concurrent.Executors;
 
@@ -45,6 +46,7 @@ public class PokerConfig {
 
   @Bean
   public GameWsHandler gameWsHandler() {
-    return new GameWsHandler(objectMapper, Executors.newSingleThreadScheduledExecutor());
+    // TODO don't hardcode delay
+    return new GameWsHandler(objectMapper, Executors.newSingleThreadScheduledExecutor(), Duration.ofSeconds(1));
   }
 }

@@ -8,22 +8,32 @@ import org.junit.jupiter.api.Test;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 
+import java.time.Duration;
 import java.util.Collections;
+import java.util.concurrent.CountDownLatch;
 import java.util.concurrent.Executors;
 import java.util.concurrent.TimeUnit;
 
+import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.doAnswer;
 import static org.mockito.Mockito.mock;
-import static org.mockito.Mockito.verify;
 
 class GameWsHandlerTest {
 
   private static final ObjectMapper OBJECT_MAPPER = new ObjectMapper();
+  private static final Duration SEND_DELAY = Duration.ofMillis(10L);
 
   @Test
   void connectAndReceiveNotifications() throws Exception {
-    final var gameWsHandler = new GameWsHandler(OBJECT_MAPPER, Executors.newSingleThreadScheduledExecutor());
+    final var gameWsHandler = new GameWsHandler(OBJECT_MAPPER, Executors.newSingleThreadScheduledExecutor(), SEND_DELAY);
     final var webSocketSession = mock(WebSocketSession.class);
+    // prepare a way to get notified when send is executed
+    final var sendExecuted = new CountDownLatch(1);
+    doAnswer(a -> {
+      sendExecuted.countDown();
+      return null;
+    }).when(webSocketSession).sendMessage(any(TextMessage.class));
     final var textMessage = new TextMessage("""
       {
         "channel": "join",
@@ -36,10 +46,9 @@ class GameWsHandlerTest {
 
     final var gameId = "game";
     final var gameDto = gameDto(gameId);
-    gameWsHandler.notify(gameId, gameDto);
+    gameWsHandler.notify(gameDto);
 
-    TimeUnit.SECONDS.sleep(2); // this works, but it is slow, better separate those things.
-    verify(webSocketSession).sendMessage(any(TextMessage.class));
+    assertThat(sendExecuted.await(2 * SEND_DELAY.toMillis(), TimeUnit.MILLISECONDS)).isTrue();
   }
 
   private GameDto gameDto(String gameId) {

@@ -9,7 +9,7 @@ import org.springframework.lang.NonNull;
 public class NoOpGameEventSubscriber implements GameEventsSubscriber {
 
   @Override
-  public void notify(@NonNull String gameId, @NonNull GameDto gameDto) {
+  public void notify(@NonNull GameDto gameDto) {
 
   }
 }

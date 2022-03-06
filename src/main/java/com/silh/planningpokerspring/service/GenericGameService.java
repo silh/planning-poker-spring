@@ -75,7 +75,7 @@ public class GenericGameService implements GameService {
     if (updated) {
       repository.find(gameId)
         .map(gameConverter::convert)
-        .ifPresent(gameDto -> subscribers.forEach(subscriber -> subscriber.notify(gameId, gameDto)));
+        .ifPresent(gameDto -> subscribers.forEach(subscriber -> subscriber.notify(gameDto)));
     }
   }
 }

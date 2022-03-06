@@ -10,8 +10,7 @@ public interface GameEventsSubscriber {
   /**
    * Receive notification about game update.
    *
-   * @param gameId - ID of updated game.
-   * @param game   - game state.
+   * @param game - game state.
    */
-  void notify(@NonNull String gameId, @NonNull GameDto game);
+  void notify(@NonNull GameDto game);
 }
