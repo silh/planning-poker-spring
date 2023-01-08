@@ -8,6 +8,7 @@ import com.silh.planningpokerspring.request.ws.WsMessage;
 import com.silh.planningpokerspring.service.GameEventsSubscriber;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
+import org.springframework.web.socket.CloseStatus;
 import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
@@ -29,6 +30,7 @@ public class GameWsHandler extends TextWebSocketHandler
   private final ObjectMapper objectMapper;
 
   private final ConcurrentMap<String, Set<WebSocketSession>> gameIdToParticipants = new ConcurrentHashMap<>();
+  private final ConcurrentMap<WebSocketSession, String> sessionToGameId = new ConcurrentHashMap<>();
   private final ConcurrentMap<String, GameDto> pendingNotifications = new ConcurrentHashMap<>();
   // FIXME this is ugly, find a better way to do that
   private final ScheduledExecutorService executorService;
@@ -55,14 +57,36 @@ public class GameWsHandler extends TextWebSocketHandler
     }
   }
 
-  private void addSession(WebSocketSession session, JoinMessage j) {
-    gameIdToParticipants.compute(j.getData().gameId(), (key, value) -> {
-      if (value == null) {
-        value = ConcurrentHashMap.newKeySet();
+  @Override
+  // TODO I think I should rather create a some self-handling game instance for each game
+  public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
+    String gameId = sessionToGameId.remove(session);
+    if (gameId == null) {
+      return;
+    }
+    gameIdToParticipants.compute(gameId, (k, sessions) -> {
+      if (sessions == null) {
+        return null;
       }
-      value.add(session);
-      return value;
+      sessions.remove(session);
+      return sessions;
     });
+    gameIdToParticipants.values().removeIf(set -> set == null || set.isEmpty());
+  }
+
+  private void addSession(WebSocketSession session, JoinMessage j) {
+    String gameId = j.getData().gameId();
+    String oldGameId = sessionToGameId.putIfAbsent(session, gameId);
+    if (oldGameId != null) {
+      log.warn("Client {} already participates in a game {}, not joining {}!",
+        session.getRemoteAddress(), session, oldGameId);
+      return;
+    }
+    gameIdToParticipants.computeIfAbsent(
+        j.getData().gameId(),
+        k -> ConcurrentHashMap.newKeySet()
+      )
+      .add(session);
   }
 
   /**
@@ -79,6 +103,7 @@ public class GameWsHandler extends TextWebSocketHandler
   }
 
   private void notifyGameParticipants(String gameId) {
+    // TODO Compute is used purely to avoid races, probably should avoid that.
     gameIdToParticipants.compute(gameId, (id, webSocketSessions) -> {
       final var gameDto = pendingNotifications.remove(gameId);
       if (webSocketSessions == null || gameDto == null) {

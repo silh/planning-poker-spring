@@ -3,6 +3,7 @@ package com.silh.planningpokerspring.repository;
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface GameRepository {
@@ -22,6 +23,13 @@ public interface GameRepository {
    * @return - optional which contains found game or empty.
    */
   Optional<Game> find(String id);
+
+  /**
+   * Returns list of all games.
+   *
+   * @return list of all games.
+   */
+  List<Game> findAll();
 
   /**
    * Get game by ID and its owner. If game with specified ID is present but owner is different Optional.empty()

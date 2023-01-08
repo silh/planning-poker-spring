@@ -4,6 +4,7 @@ import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.GameDto;
 
+import java.util.List;
 import java.util.Optional;
 
 public interface GameService {
@@ -14,6 +15,13 @@ public interface GameService {
    * @return - created Game.
    */
   GameDto createGame(Player creator);
+
+  /**
+   * List of running games.
+   *
+   * @return list of all running games.
+   */
+  List<GameDto> getGames();
 
   /**
    * Add player to a running game.

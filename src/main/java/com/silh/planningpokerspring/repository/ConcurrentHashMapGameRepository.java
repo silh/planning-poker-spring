@@ -4,6 +4,8 @@ import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
 import org.hashids.Hashids;
 
+import java.util.ArrayList;
+import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ThreadLocalRandom;
@@ -24,10 +26,15 @@ public class ConcurrentHashMapGameRepository implements GameRepository {
     return insertNewGame(creator);
   }
 
-
   @Override
   public Optional<Game> find(String id) {
     return Optional.ofNullable(games.get(id));
+  }
+
+  @Override
+  public List<Game> findAll() {
+    // TODO this is unsafe and should be fixed.
+    return new ArrayList<>(games.values());
   }
 
   @Override
@@ -38,12 +45,7 @@ public class ConcurrentHashMapGameRepository implements GameRepository {
 
   @Override
   public Optional<Game> update(Game updatedGame) {
-    return Optional.ofNullable(games.compute(updatedGame.getId(), (id, game) -> {
-      if (game == null) {
-        return null;
-      }
-      return updatedGame;
-    }));
+    return Optional.ofNullable(games.computeIfPresent(updatedGame.getId(), (id, game) -> updatedGame));
   }
 
   /**

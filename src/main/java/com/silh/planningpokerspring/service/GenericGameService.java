@@ -32,6 +32,15 @@ public class GenericGameService implements GameService {
   }
 
   @Override
+  public List<GameDto> getGames() {
+    return repository.findAll()
+      .stream()
+      .sorted()
+      .map(gameConverter::convert)
+      .toList();
+  }
+
+  @Override
   public Optional<GameDto> getGame(String gameId) {
     return repository.find(gameId)
       .map(gameConverter::convert);

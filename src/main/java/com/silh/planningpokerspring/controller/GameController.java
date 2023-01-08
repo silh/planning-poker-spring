@@ -8,10 +8,11 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import javax.servlet.http.HttpSession;
+import java.util.List;
 
 import static org.springframework.http.ResponseEntity.*;
 
-@RequestMapping("/api/game")
+@RequestMapping("/api/games")
 @RestController
 public class GameController {
 
@@ -31,6 +32,14 @@ public class GameController {
   }
 
   @GetMapping(
+    produces = MediaType.APPLICATION_JSON_VALUE,
+    consumes = MediaType.APPLICATION_JSON_VALUE
+  )
+  public ResponseEntity<List<GameDto>> getGames() {
+    return ok().body(service.getGames());
+  }
+
+  @GetMapping(
     value = "/{id}",
     produces = MediaType.APPLICATION_JSON_VALUE
   )
@@ -47,7 +56,8 @@ public class GameController {
   public ResponseEntity<?> toNextState(@PathVariable("id") String gameId,
                                        @RequestBody TransitionRequest req,
                                        HttpSession session) {
-    boolean executed = service.transitionTo(gameId, session.getId(), req.nextState());
+    String personId = session.getId();
+    boolean executed = service.transitionTo(gameId, personId, req.nextState());
     if (executed) {
       return accepted().build();
     }

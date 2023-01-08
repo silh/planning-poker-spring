@@ -28,7 +28,7 @@ class GameControllerTest {
 
   @BeforeEach
   void setUp() {
-    gameApiPath = "http://localhost:" + randomServerPort + "/api/game";
+    gameApiPath = "http://localhost:" + randomServerPort + "/api/games";
   }
 
   @Test
