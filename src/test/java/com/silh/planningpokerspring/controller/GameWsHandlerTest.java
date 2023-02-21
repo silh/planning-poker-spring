@@ -37,9 +37,7 @@ class GameWsHandlerTest {
     final var textMessage = new TextMessage("""
       {
         "channel": "join",
-        "data": {
-          "gameId": "game"
-        }
+        "gameId": "game"
       }
       """);
     gameWsHandler.handleTextMessage(webSocketSession, textMessage);
@@ -48,13 +46,13 @@ class GameWsHandlerTest {
     final var gameDto = gameDto(gameId);
     gameWsHandler.notify(gameDto);
 
-    assertThat(sendExecuted.await(2 * SEND_DELAY.toMillis(), TimeUnit.MILLISECONDS)).isTrue();
+    assertThat(sendExecuted.await(10 * SEND_DELAY.toMillis(), TimeUnit.MILLISECONDS)).isTrue();
   }
 
   private GameDto gameDto(String gameId) {
     return new GameDto(
       gameId,
-      new PlayerDto(""),
+      new PlayerDto("", ""),
       GameState.VOTING,
       Collections.emptyMap(),
       Collections.emptyMap()

@@ -1,8 +1,8 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.*;
 import com.silh.planningpokerspring.service.GameService;
+import com.silh.planningpokerspring.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -18,7 +18,7 @@ public class GameController {
 
   private final GameService service;
 
-  public GameController(GameService service) {
+  public GameController(GameService service, UserService userService) {
     this.service = service;
   }
 
@@ -26,9 +26,8 @@ public class GameController {
     produces = MediaType.APPLICATION_JSON_VALUE,
     consumes = MediaType.APPLICATION_JSON_VALUE
   )
-  public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req, HttpSession session) {
-    Player creator = new Player(session.getId(), req.name());
-    return ok().body(service.createGame(creator));
+  public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req) {
+    return ok().body(service.createGame(req.creatorId()));
   }
 
   @GetMapping(
@@ -69,9 +68,8 @@ public class GameController {
     value = "/{id}/join"
   )
   public ResponseEntity<?> join(@PathVariable("id") String gameId,
-                                @RequestBody JoinRequest joinRequest,
-                                HttpSession session) {
-    final boolean joined = service.joinGame(gameId, new Player(session.getId(), joinRequest.name()));
+                                @RequestBody JoinRequest joinRequest) {
+    final boolean joined = service.joinGame(gameId, joinRequest.playerId());
     if (joined) {
       return accepted().build();
     }
@@ -83,9 +81,8 @@ public class GameController {
     value = "/{id}/vote"
   )
   public ResponseEntity<?> vote(@PathVariable("id") String gameId,
-                                @RequestBody VoteRequest request,
-                                HttpSession session) {
-    final boolean accepted = service.vote(gameId, session.getId(), request.value());
+                                @RequestBody VoteRequest request) {
+    final boolean accepted = service.vote(gameId, request.playerId(), request.value());
     if (accepted) {
       return accepted().build();
     }

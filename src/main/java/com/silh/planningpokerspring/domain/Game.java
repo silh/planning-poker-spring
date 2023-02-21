@@ -2,18 +2,19 @@ package com.silh.planningpokerspring.domain;
 
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.HashMap;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Data
 public class Game {
   private final String id;
   private final Player creator;
-  private final Map<String, Player> participants = new ConcurrentHashMap<>();
-  private final Map<String, Long> votes = new ConcurrentHashMap<>();
-  private final AtomicReference<GameState> state = new AtomicReference<>(GameState.NOT_STARTED);
+  private final Map<String, Player> participants = new HashMap<>();
+  private final Map<String, Long> votes = new HashMap<>();
+
+  private final Instant createdAt = Instant.now();
+  private GameState state = GameState.NOT_STARTED;
 
   public Game(String id, Player creator) {
     this.creator = creator;
@@ -27,7 +28,7 @@ public class Game {
    */
   public void transitionTo(GameState nextState) {
     // Simple implementation, transition to any state is possible.
-    state.set(nextState);
+    this.state = nextState;
     if (nextState == GameState.VOTING
       || nextState == GameState.NOT_STARTED) {
       votes.clear();
@@ -41,7 +42,7 @@ public class Game {
    * @return - if participant was added.
    */
   public boolean addParticipant(Player player) {
-    return participants.putIfAbsent(player.getId(), player) == null;
+    return participants.putIfAbsent(player.id(), player) == null;
   }
 
   /**
@@ -62,7 +63,7 @@ public class Game {
    * @return - current state of the game.
    */
   public GameState getState() {
-    return state.get();
+    return state;
   }
 
   /**

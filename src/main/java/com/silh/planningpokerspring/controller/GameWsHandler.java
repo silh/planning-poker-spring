@@ -50,8 +50,7 @@ public class GameWsHandler extends TextWebSocketHandler
   @Override
   protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
     final String payload = message.getPayload();
-    final WsMessage<?> wsMessage = objectMapper.readValue(payload, WsMessage.class);
-    switch (wsMessage) {
+    switch (objectMapper.readValue(payload, WsMessage.class)) {
       case JoinMessage j -> addSession(session, j);
       case VoteMessage v -> log.info("Should we even have that?");
     }
@@ -75,7 +74,7 @@ public class GameWsHandler extends TextWebSocketHandler
   }
 
   private void addSession(WebSocketSession session, JoinMessage j) {
-    String gameId = j.getData().gameId();
+    String gameId = j.gameId();
     String oldGameId = sessionToGameId.putIfAbsent(session, gameId);
     if (oldGameId != null) {
       log.warn("Client {} already participates in a game {}, not joining {}!",
@@ -83,7 +82,7 @@ public class GameWsHandler extends TextWebSocketHandler
       return;
     }
     gameIdToParticipants.computeIfAbsent(
-        j.getData().gameId(),
+        j.gameId(),
         k -> ConcurrentHashMap.newKeySet()
       )
       .add(session);
