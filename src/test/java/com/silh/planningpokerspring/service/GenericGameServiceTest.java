@@ -11,7 +11,6 @@ import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.PlayerDto;
 import org.junit.jupiter.api.Test;
 
-import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
@@ -24,10 +23,9 @@ import static org.mockito.Mockito.when;
 class GenericGameServiceTest {
   private final GameRepository mockGameRepository = mock(GameRepository.class);
   private final UserRepository mockUserRepository = mock(UserRepository.class);
-  private final List<GameEventsSubscriber> subscribers = new ArrayList<>();
   private final PlayerConverter playerConverter = new PlayerConverter();
   private final GenericGameService gameService =
-    new GenericGameService(mockGameRepository, mockUserRepository, new GameConverterImpl(playerConverter), subscribers);
+    new GenericGameService(mockGameRepository, mockUserRepository, new GameConverterImpl(playerConverter));
 
   @Test
   void canCreateGame() {

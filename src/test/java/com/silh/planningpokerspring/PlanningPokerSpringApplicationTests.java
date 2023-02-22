@@ -1,31 +1,49 @@
 package com.silh.planningpokerspring;
 
+import com.fasterxml.jackson.databind.ObjectMapper;
 import com.silh.planningpokerspring.request.*;
+import com.silh.planningpokerspring.request.ws.JoinMessage;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.lang.NonNull;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
+import org.springframework.web.socket.TextMessage;
+import org.springframework.web.socket.WebSocketSession;
+import org.springframework.web.socket.client.WebSocketClient;
+import org.springframework.web.socket.client.standard.StandardWebSocketClient;
+import org.springframework.web.socket.handler.TextWebSocketHandler;
+
+import java.io.IOException;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PlanningPokerSpringApplicationTests {
 
+  private final WebSocketClient wsClient = new StandardWebSocketClient();
+
   private final RestOperations restTemplate = new RestTemplate();
+  private final ObjectMapper objectMapper = new ObjectMapper();
   @LocalServerPort
   private int randomServerPort;
   private String userApiPath;
   private String gameApiPath;
+  private String wsPath;
 
   @BeforeEach
   void setUp() {
     final var serverPath = "http://localhost:" + randomServerPort;
     userApiPath = serverPath + "/api/users";
     gameApiPath = serverPath + "/api/games";
+    wsPath = "ws://localhost:" + randomServerPort + "/ws";
   }
 
   @Test
@@ -33,7 +51,7 @@ class PlanningPokerSpringApplicationTests {
   }
 
   @Test
-  void createJoinStartVoteEnd() {
+  void createJoinStartVoteEnd() throws InterruptedException, IOException, ExecutionException {
     //Create users
     final PlayerDto creator = createUser("bobby");
     final PlayerDto joiner = createUser("joiner");
@@ -45,62 +63,32 @@ class PlanningPokerSpringApplicationTests {
 
     //Check returned body
     final GameDto initialGame = response.getBody();
-    var expected = initialGame; // at first, they are equal
     assertThat(initialGame).isNotNull();
     assertThat(initialGame.id())
       .isNotNull()
       .isNotEmpty();
+    assertThat(initialGame.participants()).isEmpty();
+    assertThat(initialGame.votes()).isEmpty();
     assertThat(creator).isNotNull();
     assertThat(creator.id()).isEqualTo(newGameRequest.creatorId());
 
     //Check game
-    String getGamePath = gameApiPath + "/" + expected.id();
-    final ResponseEntity<GameDto> getGameResponse =
-      restTemplate.getForEntity(getGamePath, GameDto.class);
+    String getGamePath = gameApiPath + "/" + initialGame.id();
+    final ResponseEntity<GameDto> getGameResponse = restTemplate.getForEntity(getGamePath, GameDto.class);
     assertThat(getGameResponse.getStatusCode()).isEqualTo(HttpStatus.OK);
-    assertThat(getGameResponse.getBody()).isEqualTo(expected);
-
-    //Start
-//    // FIXME we won't have this call at all soon.
-//    final ResponseEntity<Object> startedResp = restTemplate.postForEntity(
-//      gameApiPath + "/" + expected.id() + "/advance",
-//      new TransitionRequest(GameState.VOTING),
-//      Object.class
-//    );
-//    assertThat(startedResp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-    //Check game
-//    expected = new GameDto(
-//      expected.id(),
-//      expected.creator(),
-//      GameState.VOTING,
-//      expected.participants(),
-//      expected.votes()
-//    );
-    final ResponseEntity<GameDto> votingGameResponse =
-      restTemplate.getForEntity(getGamePath, GameDto.class);
-    assertThat(votingGameResponse.getBody()).isEqualTo(expected);
+    assertThat(getGameResponse.getBody()).isEqualTo(initialGame);
 
     // Join
-    final JoinRequest joinRequest = new JoinRequest(joiner.id());
-    final ResponseEntity<PlayerDto> joinedGameResp = restTemplate.postForEntity(
-      gameApiPath + "/" + expected.id() + "/join",
-      joinRequest,
-      PlayerDto.class
-    );
-    assertThat(joinedGameResp.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
-
-    //Check game
-    expected.participants().put(joiner.id(), joiner);
-    final ResponseEntity<GameDto> joinedGameCheckResp = restTemplate.getForEntity(getGamePath, GameDto.class);
-    assertThat(joinedGameCheckResp.getBody()).isEqualTo(expected);
+    var wsHandler = new SyncWebsocketHandler();
+    wsClient.doHandshake(wsHandler, wsPath);
+    GameDto gameNotification = wsHandler.join(new JoinMessage(initialGame.id(), joiner.id()));
+    initialGame.participants().put(joiner.id(), joiner);
+    assertThat(gameNotification).isEqualTo(initialGame);
 
     //Participant can vote
     final long voteValue = 1L;
     final VoteRequest voteRequest = new VoteRequest(joiner.id(), voteValue);
-    final ResponseEntity<Object> votedResponse = restTemplate.postForEntity(
-      gameApiPath + "/" + initialGame.id() + "/vote",
-      voteRequest,
-      Object.class
+    final ResponseEntity<Object> votedResponse = restTemplate.postForEntity(gameApiPath + "/" + initialGame.id() + "/vote", voteRequest, Object.class
     );
     assertThat(votedResponse.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
 
@@ -109,17 +97,37 @@ class PlanningPokerSpringApplicationTests {
     initialGame.votes().put(joiner.id(), voteValue);
     final ResponseEntity<GameDto> votedGame =
       restTemplate.getForEntity(getGamePath, GameDto.class);
-    assertThat(votedGame.getBody()).isEqualTo(expected);
+    assertThat(votedGame.getBody()).isEqualTo(initialGame);
   }
 
   private PlayerDto createUser(String name) {
     CreateUserRequest createUserRequest = new CreateUserRequest(name);
-    ResponseEntity<PlayerDto> createdPlayerResp =
-      restTemplate.postForEntity(userApiPath, createUserRequest, PlayerDto.class);
+    ResponseEntity<PlayerDto> createdPlayerResp = restTemplate.postForEntity(userApiPath, createUserRequest, PlayerDto.class);
     assertThat(createdPlayerResp.getStatusCode()).isEqualTo(HttpStatus.OK);
     final PlayerDto creator = createdPlayerResp.getBody();
     assertThat(creator).isNotNull();
     return creator;
+  }
+
+  class SyncWebsocketHandler extends TextWebSocketHandler {
+
+    private final CompletableFuture<WebSocketSession> session = new CompletableFuture<>();
+    private final ArrayBlockingQueue<GameDto> q = new ArrayBlockingQueue<>(1);
+
+    @Override
+    public void afterConnectionEstablished(@NonNull WebSocketSession session) {
+      this.session.complete(session);
+    }
+
+    @Override
+    protected void handleTextMessage(@NonNull WebSocketSession session, TextMessage message) throws Exception {
+      q.offer(objectMapper.readValue(message.getPayload(), GameDto.class));
+    }
+
+    public GameDto join(JoinMessage joinMessage) throws IOException, ExecutionException, InterruptedException {
+      this.session.get().sendMessage(new TextMessage(objectMapper.writeValueAsString(joinMessage)));
+      return q.take();
+    }
   }
 
 }

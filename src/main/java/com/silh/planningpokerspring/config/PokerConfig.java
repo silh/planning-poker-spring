@@ -14,7 +14,6 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.time.Duration;
-import java.util.List;
 import java.util.concurrent.Executors;
 
 @AllArgsConstructor
@@ -62,15 +61,19 @@ public class PokerConfig {
   public GameService gameService(
     GameRepository gameRepository,
     UserRepository userRepository,
-    GameConverter gameConverter,
-    List<GameEventsSubscriber> gameEventSubscribers
+    GameConverter gameConverter
   ) {
-    return new GenericGameService(gameRepository, userRepository, gameConverter, gameEventSubscribers);
+    return new GenericGameService(gameRepository, userRepository, gameConverter);
   }
 
   @Bean
-  public GameWsHandler gameWsHandler() {
+  public GameWsHandler gameWsHandler(GameService gameService) {
     // TODO don't hardcode delay
-    return new GameWsHandler(objectMapper, Executors.newSingleThreadScheduledExecutor(), Duration.ofSeconds(1));
+    return new GameWsHandler(
+      objectMapper,
+      gameService,
+      Executors.newSingleThreadScheduledExecutor(),
+      Duration.ofSeconds(1)
+    );
   }
 }

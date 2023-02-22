@@ -6,6 +6,7 @@ import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
 
+import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -28,12 +29,11 @@ public class GenericGameService implements GameService {
 
   public GenericGameService(GameRepository gameRepository,
                             UserRepository userRepository,
-                            GameConverter gameConverter,
-                            List<GameEventsSubscriber> subscribers) {
+                            GameConverter gameConverter) {
     this.gameRepository = gameRepository;
     this.userRepository = userRepository;
     this.gameConverter = gameConverter;
-    this.subscribers = subscribers;
+    this.subscribers = new ArrayList<>();
     this.lock = new ReentrantReadWriteLock();
   }
 
@@ -68,11 +68,21 @@ public class GenericGameService implements GameService {
   @Override
   public boolean joinGame(String gameId, String playerId) {
     return doWriteLocked(() -> {
-      // FIXME throw for now, handle with result later
-      final var player = userRepository.find(playerId)
-        .orElseThrow(() -> new RuntimeException(String.format("Player %s not found", playerId)));
+      final boolean updated = userRepository.find(playerId)
+        .flatMap(player -> gameRepository.find(gameId)
+          .map(game -> game.addParticipant(player))
+        )
+        .orElse(false);
+      notifySubscribers(updated, gameId);
+      return updated;
+    });
+  }
+
+  @Override
+  public boolean leaveGame(String gameId, String playerId) {
+    return doWriteLocked(() -> {
       final boolean updated = gameRepository.find(gameId)
-        .map(game -> game.addParticipant(player))
+        .map(game -> game.removeParticipant(playerId))
         .orElse(false);
       notifySubscribers(updated, gameId);
       return updated;
@@ -150,5 +160,10 @@ public class GenericGameService implements GameService {
     } finally {
       lock.writeLock().unlock();
     }
+  }
+
+  @Override
+  public void subscribe(GameEventsSubscriber subscriber) {
+    subscribers.add(subscriber);
   }
 }

@@ -15,13 +15,14 @@ class WsMessageTest {
     final var json = """
       {
         "channel" : "join",
-        "gameId": "id"
+        "gameId": "id",
+        "playerId": "playerId"
       }
       """;
     final WsMessage wsMessage = objectMapper.readValue(json, WsMessage.class);
     assertThat(wsMessage).isInstanceOf(JoinMessage.class);
     JoinMessage joinMessage = (JoinMessage) wsMessage;
-    assertThat(joinMessage).isEqualTo(new JoinMessage("id"));
+    assertThat(joinMessage).isEqualTo(new JoinMessage("id", "playerId"));
   }
 
   @Test

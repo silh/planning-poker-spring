@@ -46,6 +46,16 @@ public class Game {
   }
 
   /**
+   * Remove participant of the game.
+   *
+   * @param playerId - ID of a player to remove.
+   * @return - if participant was removed.
+   */
+  public boolean removeParticipant(String playerId) {
+    return participants.remove(playerId) != null;
+  }
+
+  /**
    * Add vote of a player to votes.
    *
    * @param voterId - ID of a voting person.

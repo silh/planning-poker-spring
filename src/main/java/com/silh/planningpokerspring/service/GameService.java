@@ -31,6 +31,8 @@ public interface GameService {
    */
   boolean joinGame(String gameId, String playerId);
 
+  boolean leaveGame(String gameId, String playerId);
+
   /**
    * Move game to a new stage.
    *
@@ -58,4 +60,6 @@ public interface GameService {
    * @return - Optional of game if the game with such ID exists, empty Optional otherwise.
    */
   Optional<GameDto> getGame(String gameId);
+
+  void subscribe(GameEventsSubscriber subscriber);
 }

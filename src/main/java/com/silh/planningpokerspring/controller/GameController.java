@@ -1,6 +1,9 @@
 package com.silh.planningpokerspring.controller;
 
-import com.silh.planningpokerspring.request.*;
+import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
+import com.silh.planningpokerspring.request.TransitionRequest;
+import com.silh.planningpokerspring.request.VoteRequest;
 import com.silh.planningpokerspring.service.GameService;
 import com.silh.planningpokerspring.service.UserService;
 import org.springframework.http.MediaType;
@@ -58,19 +61,6 @@ public class GameController {
     String personId = session.getId();
     boolean executed = service.transitionTo(gameId, personId, req.nextState());
     if (executed) {
-      return accepted().build();
-    }
-    return badRequest().build();
-  }
-
-  @PostMapping(
-    consumes = MediaType.APPLICATION_JSON_VALUE,
-    value = "/{id}/join"
-  )
-  public ResponseEntity<?> join(@PathVariable("id") String gameId,
-                                @RequestBody JoinRequest joinRequest) {
-    final boolean joined = service.joinGame(gameId, joinRequest.playerId());
-    if (joined) {
       return accepted().build();
     }
     return badRequest().build();
