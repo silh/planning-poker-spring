@@ -1,6 +1,7 @@
 package com.silh.planningpokerspring.service;
 
-import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.service.events.GameEvent;
+import org.springframework.context.event.EventListener;
 import org.springframework.lang.NonNull;
 
 /**
@@ -10,7 +11,8 @@ public interface GameEventsSubscriber {
   /**
    * Receive notification about game update.
    *
-   * @param game - game state.
+   * @param gameEvent - what happened.
    */
-  void notify(@NonNull GameDto game);
+  @EventListener(GameEvent.class)
+  void notify(@NonNull GameEvent gameEvent);
 }

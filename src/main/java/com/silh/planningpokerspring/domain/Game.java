@@ -1,9 +1,11 @@
 package com.silh.planningpokerspring.domain;
 
+import com.silh.planningpokerspring.service.GameEventsSubscriber;
 import lombok.Data;
 
 import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 @Data
@@ -12,13 +14,19 @@ public class Game {
   private final Player creator;
   private final Map<String, Player> participants = new HashMap<>();
   private final Map<String, Long> votes = new HashMap<>();
+  private final List<GameEventsSubscriber> eventsSubscribers;
 
   private final Instant createdAt = Instant.now();
   private GameState state = GameState.NOT_STARTED;
 
   public Game(String id, Player creator) {
+    this(id, creator, List.of());
+  }
+
+  public Game(String id, Player creator, List<GameEventsSubscriber> eventsSubscribers) {
     this.creator = creator;
     this.id = id;
+    this.eventsSubscribers = eventsSubscribers;
   }
 
   /**

@@ -8,13 +8,14 @@ import com.silh.planningpokerspring.converter.PlayerConverter;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.HashMapGameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
-import com.silh.planningpokerspring.service.*;
+import com.silh.planningpokerspring.service.GameService;
+import com.silh.planningpokerspring.service.GenericGameService;
+import com.silh.planningpokerspring.service.StringIdGenerator;
+import com.silh.planningpokerspring.service.UserService;
 import lombok.AllArgsConstructor;
+import org.springframework.context.ApplicationEventPublisher;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import java.time.Duration;
-import java.util.concurrent.Executors;
 
 @AllArgsConstructor
 @Configuration(proxyBeanMethods = false)
@@ -48,11 +49,6 @@ public class PokerConfig {
   }
 
   @Bean
-  public GameEventsSubscriber noOpGameEventSubscriber() {
-    return new NoOpGameEventSubscriber();
-  }
-
-  @Bean
   public GameRepository gameRepository(StringIdGenerator idGenerator) {
     return new HashMapGameRepository(idGenerator);
   }
@@ -61,19 +57,15 @@ public class PokerConfig {
   public GameService gameService(
     GameRepository gameRepository,
     UserRepository userRepository,
-    GameConverter gameConverter
+    GameConverter gameConverter,
+    PlayerConverter playerConverter,
+    ApplicationEventPublisher eventPublisher
   ) {
-    return new GenericGameService(gameRepository, userRepository, gameConverter);
+    return new GenericGameService(gameRepository, userRepository, gameConverter, playerConverter, eventPublisher);
   }
 
   @Bean
   public GameWsHandler gameWsHandler(GameService gameService) {
-    // TODO don't hardcode delay
-    return new GameWsHandler(
-      objectMapper,
-      gameService,
-      Executors.newSingleThreadScheduledExecutor(),
-      Duration.ofSeconds(1)
-    );
+    return new GameWsHandler(objectMapper, gameService);
   }
 }

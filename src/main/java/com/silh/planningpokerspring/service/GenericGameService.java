@@ -1,10 +1,14 @@
 package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.converter.GameConverter;
+import com.silh.planningpokerspring.converter.PlayerConverter;
 import com.silh.planningpokerspring.domain.GameState;
+import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.service.events.*;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
 import java.util.Comparator;
@@ -23,16 +27,21 @@ public class GenericGameService implements GameService {
   private final GameRepository gameRepository;
   private final UserRepository userRepository;
   private final GameConverter gameConverter;
+  private final PlayerConverter playerConverter;
   private final List<GameEventsSubscriber> subscribers;
+  private final ApplicationEventPublisher eventPublisher;
 
   private final ReadWriteLock lock;
 
   public GenericGameService(GameRepository gameRepository,
                             UserRepository userRepository,
-                            GameConverter gameConverter) {
+                            GameConverter gameConverter, PlayerConverter playerConverter,
+                            ApplicationEventPublisher eventPublisher) {
     this.gameRepository = gameRepository;
     this.userRepository = userRepository;
     this.gameConverter = gameConverter;
+    this.playerConverter = playerConverter;
+    this.eventPublisher = eventPublisher;
     this.subscribers = new ArrayList<>();
     this.lock = new ReentrantReadWriteLock();
   }
@@ -68,12 +77,16 @@ public class GenericGameService implements GameService {
   @Override
   public boolean joinGame(String gameId, String playerId) {
     return doWriteLocked(() -> {
-      final boolean updated = userRepository.find(playerId)
-        .flatMap(player -> gameRepository.find(gameId)
-          .map(game -> game.addParticipant(player))
-        )
+      // TODO this is ugly, improve it. Maybe move it to game itself?
+      Optional<Player> maybePlayer = userRepository.find(playerId);
+      if (maybePlayer.isEmpty()) {
+        return false;
+      }
+      Player player = maybePlayer.get();
+      final boolean updated = gameRepository.find(gameId)
+        .map(game -> game.addParticipant(player))
         .orElse(false);
-      notifySubscribers(updated, gameId);
+      publishEvent(updated, new PlayerJoinedEvent(gameId, playerConverter.convert(player)));
       return updated;
     });
   }
@@ -84,7 +97,7 @@ public class GenericGameService implements GameService {
       final boolean updated = gameRepository.find(gameId)
         .map(game -> game.removeParticipant(playerId))
         .orElse(false);
-      notifySubscribers(updated, gameId);
+      publishEvent(updated, new PlayerLeftEvent(gameId, playerId));
       return updated;
     });
   }
@@ -98,7 +111,7 @@ public class GenericGameService implements GameService {
           game.transitionTo(nextState);
           return true;
         }).orElse(false);
-      notifySubscribers(updated, gameId);
+      publishEvent(updated, new TransitionEvent(gameId, nextState));
       return updated;
     });
   }
@@ -111,19 +124,9 @@ public class GenericGameService implements GameService {
         .filter(game -> game.getParticipants().containsKey(voterId))
         .map(game -> game.addVote(voterId, value))
         .orElse(false);
-      notifySubscribers(updated, gameId);
+      publishEvent(updated, new VoteEvent(gameId, voterId, value));
       return updated;
     });
-  }
-
-  private void notifySubscribers(boolean updated, String gameId) {
-    if (updated) {
-      gameRepository.find(gameId)
-        .map(gameConverter::convert)
-        .ifPresent(gameDto ->
-          subscribers.forEach(subscriber -> subscriber.notify(gameDto))
-        );
-    }
   }
 
   private void doReadLocked(Runnable action) {
@@ -165,5 +168,11 @@ public class GenericGameService implements GameService {
   @Override
   public void subscribe(GameEventsSubscriber subscriber) {
     subscribers.add(subscriber);
+  }
+
+  private void publishEvent(boolean updated, GameEvent event) {
+    if (updated) {
+      eventPublisher.publishEvent(event);
+    }
   }
 }
