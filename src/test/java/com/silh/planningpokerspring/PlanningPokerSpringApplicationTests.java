@@ -1,9 +1,19 @@
 package com.silh.planningpokerspring;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.silh.planningpokerspring.request.*;
+import com.silh.planningpokerspring.domain.GameState;
+import com.silh.planningpokerspring.request.CreateUserRequest;
+import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
+import com.silh.planningpokerspring.request.PlayerDto;
 import com.silh.planningpokerspring.request.ws.JoinMessage;
+import com.silh.planningpokerspring.request.ws.TransitionMessage;
+import com.silh.planningpokerspring.request.ws.VoteMessage;
+import com.silh.planningpokerspring.request.ws.WsMessage;
 import com.silh.planningpokerspring.service.events.GameEvent;
+import com.silh.planningpokerspring.service.events.PlayerJoinedEvent;
+import com.silh.planningpokerspring.service.events.TransitionEvent;
+import com.silh.planningpokerspring.service.events.VoteEvent;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -20,10 +30,7 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.concurrent.ArrayBlockingQueue;
-import java.util.concurrent.CompletableFuture;
-import java.util.concurrent.ExecutionException;
-import java.util.concurrent.TimeUnit;
+import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -53,7 +60,7 @@ class PlanningPokerSpringApplicationTests {
   }
 
   @Test
-  void createJoinStartVoteEnd() throws InterruptedException, IOException, ExecutionException {
+  void createJoinStartVoteEnd() throws InterruptedException, IOException, ExecutionException, TimeoutException {
     //Create users
     final PlayerDto creator = createUser("bobby");
     final PlayerDto joiner = createUser("joiner");
@@ -64,7 +71,7 @@ class PlanningPokerSpringApplicationTests {
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
     //Check returned body
-    final GameDto ongoingGame = response.getBody();
+    GameDto ongoingGame = response.getBody();
     assertThat(ongoingGame).isNotNull();
     assertThat(ongoingGame.id())
       .isNotNull()
@@ -82,21 +89,36 @@ class PlanningPokerSpringApplicationTests {
 
     // Join
     var wsHandler = new SyncWebsocketHandler();
-    wsClient.doHandshake(wsHandler, wsPath);
-    GameEvent gameEvent = wsHandler.join(new JoinMessage(ongoingGame.id(), joiner.id()));
+    wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
+    GameEvent joinEvent = wsHandler.send(new JoinMessage(ongoingGame.id(), joiner.id()));
     ongoingGame.participants().put(joiner.id(), joiner);
-//    assertThat(gameEvent).isEqualTo(ongoingGame);
+    assertThat(joinEvent)
+      .isEqualTo(new PlayerJoinedEvent(ongoingGame.id(), joiner));
 
     //Participant can vote
-    final long voteValue = 1L;
-    final VoteRequest voteRequest = new VoteRequest(joiner.id(), voteValue);
-    final ResponseEntity<Object> votedResponse = restTemplate.postForEntity(gameApiPath + "/" + ongoingGame.id() + "/vote", voteRequest, Object.class
+    wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
+    long voteValue = 1L;
+    GameEvent voteEvent = wsHandler.send(new VoteMessage(voteValue));
+    ongoingGame.votes().put(joiner.id(), voteValue);
+    assertThat(voteEvent)
+      .isEqualTo(new VoteEvent(ongoingGame.id(), joiner.id(), voteValue));
+
+    //Participant can transition to a new state
+    wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
+    GameState nextState = GameState.DISCUSSION;
+    GameEvent transitionEvent = wsHandler.send(new TransitionMessage(nextState));
+    ongoingGame = new GameDto(
+      ongoingGame.id(),
+      ongoingGame.creator(),
+      nextState,
+      ongoingGame.participants(),
+      ongoingGame.votes()
     );
-    assertThat(votedResponse.getStatusCode()).isEqualTo(HttpStatus.ACCEPTED);
+    assertThat(transitionEvent)
+      .isEqualTo(new TransitionEvent(ongoingGame.id(), nextState));
 
     //Check game
     // FIXME should not be able to do that until the game is in the correct state
-    ongoingGame.votes().put(joiner.id(), voteValue);
     final ResponseEntity<GameDto> votedGame =
       restTemplate.getForEntity(getGamePath, GameDto.class);
     assertThat(votedGame.getBody()).isEqualTo(ongoingGame);
@@ -126,9 +148,9 @@ class PlanningPokerSpringApplicationTests {
       q.offer(objectMapper.readValue(message.getPayload(), GameEvent.class));
     }
 
-    public GameEvent join(JoinMessage joinMessage) throws IOException, ExecutionException, InterruptedException {
-      this.session.get().sendMessage(new TextMessage(objectMapper.writeValueAsString(joinMessage)));
-      GameEvent gameEvent = q.poll(100, TimeUnit.SECONDS);
+    public GameEvent send(WsMessage wsMessage) throws IOException, ExecutionException, InterruptedException {
+      this.session.get().sendMessage(new TextMessage(objectMapper.writeValueAsString(wsMessage)));
+      GameEvent gameEvent = q.poll(1, TimeUnit.SECONDS);
       assertThat(gameEvent).isNotNull();
       return gameEvent;
     }

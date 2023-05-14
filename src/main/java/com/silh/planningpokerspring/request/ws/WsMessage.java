@@ -12,7 +12,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
   property = "channel")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = JoinMessage.class, name = "join"),
-  @JsonSubTypes.Type(value = VoteMessage.class, name = "vote")
+  @JsonSubTypes.Type(value = VoteMessage.class, name = "vote"),
+  @JsonSubTypes.Type(value = TransitionMessage.class, name = "transition")
 })
-public sealed interface WsMessage permits JoinMessage, VoteMessage {
+public sealed interface WsMessage permits JoinMessage, VoteMessage, TransitionMessage {
 }

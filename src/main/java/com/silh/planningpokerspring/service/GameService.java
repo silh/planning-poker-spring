@@ -61,5 +61,4 @@ public interface GameService {
    */
   Optional<GameDto> getGame(String gameId);
 
-  void subscribe(GameEventsSubscriber subscriber);
 }

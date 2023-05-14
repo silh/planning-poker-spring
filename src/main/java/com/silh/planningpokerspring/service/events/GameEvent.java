@@ -9,6 +9,8 @@ import com.fasterxml.jackson.annotation.JsonTypeInfo;
   property = "channel")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = PlayerJoinedEvent.class, name = "join"),
+  @JsonSubTypes.Type(value = VoteEvent.class, name = "vote"),
+  @JsonSubTypes.Type(value = TransitionEvent.class, name = "transition"),
   @JsonSubTypes.Type(value = PlayerLeftEvent.class, name = "leave")
 })
 public sealed interface GameEvent permits PlayerJoinedEvent, PlayerLeftEvent, TransitionEvent, VoteEvent {

@@ -3,6 +3,7 @@ package com.silh.planningpokerspring.controller;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.silh.planningpokerspring.request.ws.JoinMessage;
+import com.silh.planningpokerspring.request.ws.TransitionMessage;
 import com.silh.planningpokerspring.request.ws.VoteMessage;
 import com.silh.planningpokerspring.request.ws.WsMessage;
 import com.silh.planningpokerspring.service.GameEventsSubscriber;
@@ -15,6 +16,7 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
@@ -27,19 +29,17 @@ public class GameWsHandler extends TextWebSocketHandler
   implements GameEventsSubscriber {
 
   private final ObjectMapper objectMapper;
+  private final GameService gameService;
 
   // TODO the bellow 2 fields should be most likely protected by one lock as otherwise there is a possibility for a race
   // condition.
   private final ConcurrentMap<String, Set<WebSocketSession>> gameIdToParticipants = new ConcurrentHashMap<>();
   private final ConcurrentMap<WebSocketSession, JoinMessage> sessionToSessionInfo = new ConcurrentHashMap<>();
 
-  private final GameService gameService;
 
   public GameWsHandler(ObjectMapper objectMapper, GameService gameService) {
     this.objectMapper = objectMapper;
     this.gameService = gameService;
-    // FIXME this is ugly, find a better way to do that
-    this.gameService.subscribe(this);
   }
 
   @Override
@@ -52,7 +52,29 @@ public class GameWsHandler extends TextWebSocketHandler
     final String payload = message.getPayload();
     switch (objectMapper.readValue(payload, WsMessage.class)) {
       case JoinMessage j -> addSession(session, j);
-      case VoteMessage v -> log.info("Should we even have that?");
+      case VoteMessage v -> vote(session, v);
+      case TransitionMessage v -> transition(session, v);
+    }
+  }
+
+  private void transition(WebSocketSession session, TransitionMessage transitionMessage) {
+    try {
+      log.debug("Transitioning: message={}", transitionMessage);
+      var sessionInfo = sessionToSessionInfo.get(session);
+      if (sessionInfo == null) return;
+      gameService.transitionTo(sessionInfo.gameId(), sessionInfo.playerId(), transitionMessage.nextState());
+    } catch (RuntimeException e) {
+      log.error("Exception while transitioning request={}: ", transitionMessage, e);
+    }
+  }
+
+  private void vote(WebSocketSession session, VoteMessage voteMessage) {
+    try {
+      var sessionInfo = sessionToSessionInfo.get(session);
+      if (sessionInfo == null) return;
+      gameService.vote(sessionInfo.gameId(), sessionInfo.playerId(), voteMessage.vote());
+    } catch (RuntimeException e) {
+      log.error("Exception while voting, request={}: ", voteMessage, e);
     }
   }
 
@@ -70,7 +92,8 @@ public class GameWsHandler extends TextWebSocketHandler
       .add(session);
     boolean joined = gameService.joinGame(joinMessage.gameId(), joinMessage.playerId());
     if (!joined) {
-      log.warn("Could not join the game: session={}, message={}", session.getRemoteAddress(), joinMessage);
+      log.warn("Could not join the game: session={}, message={}, gameId={}",
+        session.getRemoteAddress(), joinMessage, joinMessage.gameId());
       cleanLocalMaps(session);
     }
   }
@@ -80,7 +103,7 @@ public class GameWsHandler extends TextWebSocketHandler
   public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
     JoinMessage joinMessage = cleanLocalMaps(session);
     if (joinMessage == null) return;
-    gameService.leaveGame(joinMessage.gameId(), joinMessage.playerId());
+    gameService.leaveGame(joinMessage.gameId(), joinMessage.playerId()); // TODO Maybe we should not leave, just mark as inactive?
   }
 
   private JoinMessage cleanLocalMaps(WebSocketSession session) {
@@ -98,15 +121,12 @@ public class GameWsHandler extends TextWebSocketHandler
     return joinMessage;
   }
 
-  /**
-   * Puts a notification into pending notifications to be processed at some time in the future.
-   */
   @Override
   public void notify(@NonNull GameEvent gameEvent) {
     try {
       var payload = objectMapper.writeValueAsBytes(gameEvent);
 
-      gameIdToParticipants.get(gameEvent.gameId())
+      gameIdToParticipants.getOrDefault(gameEvent.gameId(), Collections.emptySet())
         .forEach(wsSession -> {
           try {
             wsSession.sendMessage(new TextMessage(payload));

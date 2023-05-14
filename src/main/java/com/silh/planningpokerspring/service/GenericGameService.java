@@ -3,14 +3,13 @@ package com.silh.planningpokerspring.service;
 import com.silh.planningpokerspring.converter.GameConverter;
 import com.silh.planningpokerspring.converter.PlayerConverter;
 import com.silh.planningpokerspring.domain.GameState;
-import com.silh.planningpokerspring.domain.Player;
+import com.silh.planningpokerspring.exception.UserNotFoundException;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.service.events.*;
 import org.springframework.context.ApplicationEventPublisher;
 
-import java.util.ArrayList;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
@@ -28,21 +27,20 @@ public class GenericGameService implements GameService {
   private final UserRepository userRepository;
   private final GameConverter gameConverter;
   private final PlayerConverter playerConverter;
-  private final List<GameEventsSubscriber> subscribers;
   private final ApplicationEventPublisher eventPublisher;
 
   private final ReadWriteLock lock;
 
   public GenericGameService(GameRepository gameRepository,
                             UserRepository userRepository,
-                            GameConverter gameConverter, PlayerConverter playerConverter,
+                            GameConverter gameConverter,
+                            PlayerConverter playerConverter,
                             ApplicationEventPublisher eventPublisher) {
     this.gameRepository = gameRepository;
     this.userRepository = userRepository;
     this.gameConverter = gameConverter;
     this.playerConverter = playerConverter;
     this.eventPublisher = eventPublisher;
-    this.subscribers = new ArrayList<>();
     this.lock = new ReentrantReadWriteLock();
   }
 
@@ -50,7 +48,7 @@ public class GenericGameService implements GameService {
   public GameDto createGame(String creatorId) {
     // throw an exception for now, better handled by Result
     final var creator = userRepository.find(creatorId)
-      .orElseThrow(() -> new RuntimeException(String.format("user %s not found", creatorId)));
+      .orElseThrow(() -> new UserNotFoundException(String.format("user %s not found", creatorId)));
     return doWriteLocked(() -> gameConverter.convert(gameRepository.create(creator)));
   }
 
@@ -78,16 +76,16 @@ public class GenericGameService implements GameService {
   public boolean joinGame(String gameId, String playerId) {
     return doWriteLocked(() -> {
       // TODO this is ugly, improve it. Maybe move it to game itself?
-      Optional<Player> maybePlayer = userRepository.find(playerId);
-      if (maybePlayer.isEmpty()) {
-        return false;
-      }
-      Player player = maybePlayer.get();
-      final boolean updated = gameRepository.find(gameId)
-        .map(game -> game.addParticipant(player))
+      return userRepository.find(playerId)
+        .map(player -> {
+          final boolean updated = gameRepository.find(gameId)
+            .map(game -> game.addParticipant(player))
+            .orElse(false);
+          // TODO remove side effect
+          publishEvent(updated, new PlayerJoinedEvent(gameId, playerConverter.convert(player)));
+          return updated;
+        })
         .orElse(false);
-      publishEvent(updated, new PlayerJoinedEvent(gameId, playerConverter.convert(player)));
-      return updated;
     });
   }
 
@@ -106,7 +104,8 @@ public class GenericGameService implements GameService {
   public boolean transitionTo(String gameId, String personId, GameState nextState) {
     return doWriteLocked(() -> {
       final boolean updated = gameRepository
-        .findByIdAndOwnerId(gameId, personId)
+//        .findByIdAndOwnerId(gameId, personId)
+        .find(gameId) // TODO should only owner be able to transition?
         .map(game -> {
           game.transitionTo(nextState);
           return true;
@@ -163,11 +162,6 @@ public class GenericGameService implements GameService {
     } finally {
       lock.writeLock().unlock();
     }
-  }
-
-  @Override
-  public void subscribe(GameEventsSubscriber subscriber) {
-    subscribers.add(subscriber);
   }
 
   private void publishEvent(boolean updated, GameEvent event) {

@@ -5,5 +5,5 @@ import com.fasterxml.jackson.annotation.JsonProperty;
 /**
  * A message sent when user tries to vote.
  */
-public record VoteMessage(@JsonProperty("vote") Long vote) implements WsMessage {
+public record VoteMessage(@JsonProperty("vote") long vote) implements WsMessage {
 }

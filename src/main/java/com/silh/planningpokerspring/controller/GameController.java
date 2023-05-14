@@ -2,18 +2,16 @@ package com.silh.planningpokerspring.controller;
 
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.NewGameRequest;
-import com.silh.planningpokerspring.request.TransitionRequest;
-import com.silh.planningpokerspring.request.VoteRequest;
 import com.silh.planningpokerspring.service.GameService;
 import com.silh.planningpokerspring.service.UserService;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
-import javax.servlet.http.HttpSession;
 import java.util.List;
 
-import static org.springframework.http.ResponseEntity.*;
+import static org.springframework.http.ResponseEntity.notFound;
+import static org.springframework.http.ResponseEntity.ok;
 
 @RequestMapping("/api/games")
 @RestController
@@ -49,34 +47,6 @@ public class GameController {
     return service.getGame(gameId)
       .map(game -> ok().body(game))
       .orElseGet(() -> notFound().build());
-  }
-
-  @PostMapping(
-    consumes = MediaType.APPLICATION_JSON_VALUE,
-    value = "/{id}/advance"
-  )
-  public ResponseEntity<?> toNextState(@PathVariable("id") String gameId,
-                                       @RequestBody TransitionRequest req,
-                                       HttpSession session) {
-    String personId = session.getId();
-    boolean executed = service.transitionTo(gameId, personId, req.nextState());
-    if (executed) {
-      return accepted().build();
-    }
-    return badRequest().build();
-  }
-
-  @PostMapping(
-    consumes = MediaType.APPLICATION_JSON_VALUE,
-    value = "/{id}/vote"
-  )
-  public ResponseEntity<?> vote(@PathVariable("id") String gameId,
-                                @RequestBody VoteRequest request) {
-    final boolean accepted = service.vote(gameId, request.playerId(), request.value());
-    if (accepted) {
-      return accepted().build();
-    }
-    return badRequest().build();
   }
 
 }
