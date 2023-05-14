@@ -109,7 +109,8 @@ public class GenericGameService implements GameService {
         .map(game -> {
           game.transitionTo(nextState);
           return true;
-        }).orElse(false);
+        })
+        .orElse(false);
       publishEvent(updated, new TransitionEvent(gameId, nextState));
       return updated;
     });

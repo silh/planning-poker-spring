@@ -93,7 +93,7 @@ class GenericGameServiceTest {
   void creatorCanTransitionGameToAnotherStage() {
     final Player creator = new Player("1", "1");
     final Game expectedGame = new Game("id", creator);
-    when(mockGameRepository.findByIdAndOwnerId(expectedGame.getId(), creator.id()))
+    when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
 
     final GameState nextState = GameState.VOTING;
