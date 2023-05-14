@@ -2,18 +2,24 @@ package com.silh.planningpokerspring.repository;
 
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
-import org.hashids.Hashids;
+import com.silh.planningpokerspring.service.StringIdGenerator;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.ThreadLocalRandom;
 
-public class ConcurrentHashMapGameRepository implements GameRepository {
+/**
+ * Expected to be used only by one thread at a time.
+ */
+public class HashMapGameRepository implements GameRepository {
 
-  private final ConcurrentHashMap<String, Game> games = new ConcurrentHashMap<>();
-  private final Hashids idGenerator = new Hashids("add some salt, per favore");
+  private final HashMap<String, Game> games = new HashMap<>();
+  private final StringIdGenerator idGenerator;
+
+  public HashMapGameRepository(StringIdGenerator idGenerator) {
+    this.idGenerator = idGenerator;
+  }
 
   /**
    * Create a new game, assign ID to it and store it.
@@ -40,7 +46,7 @@ public class ConcurrentHashMapGameRepository implements GameRepository {
   @Override
   public Optional<Game> findByIdAndOwnerId(String id, String ownerId) {
     return Optional.ofNullable(games.get(id))
-      .filter(game -> game.getCreator().getId().equals(ownerId));
+      .filter(game -> game.getCreator().id().equals(ownerId));
   }
 
   @Override
@@ -62,17 +68,10 @@ public class ConcurrentHashMapGameRepository implements GameRepository {
     Game game;
     Game oldGame;
     do {
-      final String newId = getNewId();
+      final String newId = idGenerator.generate();
       game = new Game(newId, creator);
       oldGame = games.putIfAbsent(newId, game);
     } while (oldGame != null);
     return game;
-  }
-
-  private String getNewId() {
-    final ThreadLocalRandom random = ThreadLocalRandom.current();
-    return idGenerator.encode(random.nextLong(Hashids.MAX_NUMBER),
-      random.nextLong(Hashids.MAX_NUMBER),
-      random.nextLong(Hashids.MAX_NUMBER));
   }
 }

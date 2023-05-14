@@ -1,7 +1,6 @@
 package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.domain.GameState;
-import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.GameDto;
 
 import java.util.List;
@@ -11,10 +10,10 @@ public interface GameService {
   /**
    * Create a new game.
    *
-   * @param creator - creator of the new game.
+   * @param creatorId - id of game creator.
    * @return - created Game.
    */
-  GameDto createGame(Player creator);
+  GameDto createGame(String creatorId);
 
   /**
    * List of running games.
@@ -26,11 +25,13 @@ public interface GameService {
   /**
    * Add player to a running game.
    *
-   * @param gameId - id of the game to which user should be added.
-   * @param player - player that should be added.
+   * @param gameId   - id of the game to which user should be added.
+   * @param playerId - ID of a player who wants to join.
    * @return - true if player was added, false otherwise.
    */
-  boolean joinGame(String gameId, Player player);
+  boolean joinGame(String gameId, String playerId);
+
+  boolean leaveGame(String gameId, String playerId);
 
   /**
    * Move game to a new stage.
@@ -59,4 +60,5 @@ public interface GameService {
    * @return - Optional of game if the game with such ID exists, empty Optional otherwise.
    */
   Optional<GameDto> getGame(String gameId);
+
 }

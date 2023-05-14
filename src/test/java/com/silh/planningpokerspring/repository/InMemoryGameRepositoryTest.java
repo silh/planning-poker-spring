@@ -2,6 +2,7 @@ package com.silh.planningpokerspring.repository;
 
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
+import com.silh.planningpokerspring.service.StringIdGenerator;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -10,7 +11,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 class InMemoryGameRepositoryTest {
 
-  private final GameRepository gameRepository = new ConcurrentHashMapGameRepository();
+  private final GameRepository gameRepository = new HashMapGameRepository(new StringIdGenerator());
 
   @Test
   void canCreateNewGame() {

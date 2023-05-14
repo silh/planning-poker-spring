@@ -1,11 +1,14 @@
 package com.silh.planningpokerspring.controller;
 
+import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.ws.JoinMessage;
+import com.silh.planningpokerspring.request.ws.TransitionMessage;
 import com.silh.planningpokerspring.request.ws.VoteMessage;
 import com.silh.planningpokerspring.request.ws.WsMessage;
 import com.silh.planningpokerspring.service.GameEventsSubscriber;
+import com.silh.planningpokerspring.service.GameService;
+import com.silh.planningpokerspring.service.events.GameEvent;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.lang.NonNull;
 import org.springframework.web.socket.CloseStatus;
@@ -13,12 +16,10 @@ import org.springframework.web.socket.TextMessage;
 import org.springframework.web.socket.WebSocketSession;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
-import java.time.Duration;
+import java.util.Collections;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.concurrent.ConcurrentMap;
-import java.util.concurrent.ScheduledExecutorService;
-import java.util.concurrent.TimeUnit;
 
 /**
  * Responsible for sending game state update events to the client.
@@ -28,18 +29,17 @@ public class GameWsHandler extends TextWebSocketHandler
   implements GameEventsSubscriber {
 
   private final ObjectMapper objectMapper;
+  private final GameService gameService;
 
+  // TODO the bellow 2 fields should be most likely protected by one lock as otherwise there is a possibility for a race
+  // condition.
   private final ConcurrentMap<String, Set<WebSocketSession>> gameIdToParticipants = new ConcurrentHashMap<>();
-  private final ConcurrentMap<WebSocketSession, String> sessionToGameId = new ConcurrentHashMap<>();
-  private final ConcurrentMap<String, GameDto> pendingNotifications = new ConcurrentHashMap<>();
-  // FIXME this is ugly, find a better way to do that
-  private final ScheduledExecutorService executorService;
-  private final Duration sendDelay;
+  private final ConcurrentMap<WebSocketSession, JoinMessage> sessionToSessionInfo = new ConcurrentHashMap<>();
 
-  public GameWsHandler(ObjectMapper objectMapper, ScheduledExecutorService executorService, Duration sendDelay) {
+
+  public GameWsHandler(ObjectMapper objectMapper, GameService gameService) {
     this.objectMapper = objectMapper;
-    this.executorService = executorService;
-    this.sendDelay = sendDelay;
+    this.gameService = gameService;
   }
 
   @Override
@@ -50,74 +50,93 @@ public class GameWsHandler extends TextWebSocketHandler
   @Override
   protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
     final String payload = message.getPayload();
-    final WsMessage<?> wsMessage = objectMapper.readValue(payload, WsMessage.class);
-    switch (wsMessage) {
+    switch (objectMapper.readValue(payload, WsMessage.class)) {
       case JoinMessage j -> addSession(session, j);
-      case VoteMessage v -> log.info("Should we even have that?");
+      case VoteMessage v -> vote(session, v);
+      case TransitionMessage v -> transition(session, v);
+    }
+  }
+
+  private void transition(WebSocketSession session, TransitionMessage transitionMessage) {
+    try {
+      log.debug("Transitioning: message={}", transitionMessage);
+      var sessionInfo = sessionToSessionInfo.get(session);
+      if (sessionInfo == null) return;
+      gameService.transitionTo(sessionInfo.gameId(), sessionInfo.playerId(), transitionMessage.nextState());
+    } catch (RuntimeException e) {
+      log.error("Exception while transitioning request={}: ", transitionMessage, e);
+    }
+  }
+
+  private void vote(WebSocketSession session, VoteMessage voteMessage) {
+    try {
+      var sessionInfo = sessionToSessionInfo.get(session);
+      if (sessionInfo == null) return;
+      gameService.vote(sessionInfo.gameId(), sessionInfo.playerId(), voteMessage.vote());
+    } catch (RuntimeException e) {
+      log.error("Exception while voting, request={}: ", voteMessage, e);
+    }
+  }
+
+  private void addSession(WebSocketSession session, JoinMessage joinMessage) {
+    var oldMessage = sessionToSessionInfo.putIfAbsent(session, joinMessage);
+    if (oldMessage != null) {
+      log.warn("Client {} already participates in a game, not joining: sessionInfo={}",
+        session.getRemoteAddress(), oldMessage);
+      return;
+    }
+    gameIdToParticipants.computeIfAbsent(
+        joinMessage.gameId(),
+        k -> ConcurrentHashMap.newKeySet()
+      )
+      .add(session);
+    boolean joined = gameService.joinGame(joinMessage.gameId(), joinMessage.playerId());
+    if (!joined) {
+      log.warn("Could not join the game: session={}, message={}, gameId={}",
+        session.getRemoteAddress(), joinMessage, joinMessage.gameId());
+      cleanLocalMaps(session);
     }
   }
 
   @Override
   // TODO I think I should rather create a some self-handling game instance for each game
   public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
-    String gameId = sessionToGameId.remove(session);
-    if (gameId == null) {
-      return;
+    JoinMessage joinMessage = cleanLocalMaps(session);
+    if (joinMessage == null) return;
+    gameService.leaveGame(joinMessage.gameId(), joinMessage.playerId()); // TODO Maybe we should not leave, just mark as inactive?
+  }
+
+  private JoinMessage cleanLocalMaps(WebSocketSession session) {
+    JoinMessage joinMessage = sessionToSessionInfo.remove(session);
+    if (joinMessage == null) {
+      return null;
     }
-    gameIdToParticipants.compute(gameId, (k, sessions) -> {
+    gameIdToParticipants.compute(joinMessage.gameId(), (k, sessions) -> {
       if (sessions == null) {
         return null;
       }
       sessions.remove(session);
-      return sessions;
+      return sessions.isEmpty() ? null : sessions;
     });
-    gameIdToParticipants.values().removeIf(set -> set == null || set.isEmpty());
+    return joinMessage;
   }
 
-  private void addSession(WebSocketSession session, JoinMessage j) {
-    String gameId = j.getData().gameId();
-    String oldGameId = sessionToGameId.putIfAbsent(session, gameId);
-    if (oldGameId != null) {
-      log.warn("Client {} already participates in a game {}, not joining {}!",
-        session.getRemoteAddress(), session, oldGameId);
-      return;
-    }
-    gameIdToParticipants.computeIfAbsent(
-        j.getData().gameId(),
-        k -> ConcurrentHashMap.newKeySet()
-      )
-      .add(session);
-  }
-
-  /**
-   * Puts a notification into pending notifications to be processed at some time in the future.
-   */
   @Override
-  public void notify(@NonNull GameDto gameDto) {
-    pendingNotifications.compute(gameDto.id(), (key, value) -> {
-      if (value == null) {
-        executorService.schedule(() -> notifyGameParticipants(gameDto.id()), sendDelay.toMillis(), TimeUnit.MILLISECONDS);
-      }
-      return gameDto;
-    });
-  }
+  public void notify(@NonNull GameEvent gameEvent) {
+    try {
+      var payload = objectMapper.writeValueAsBytes(gameEvent);
 
-  private void notifyGameParticipants(String gameId) {
-    // TODO Compute is used purely to avoid races, probably should avoid that.
-    gameIdToParticipants.compute(gameId, (id, webSocketSessions) -> {
-      final var gameDto = pendingNotifications.remove(gameId);
-      if (webSocketSessions == null || gameDto == null) {
-        return webSocketSessions;
-      }
-      for (WebSocketSession webSocketSession : webSocketSessions) {
-        try {
-          webSocketSession.sendMessage(new TextMessage(objectMapper.writeValueAsBytes(gameDto)));
-        } catch (Exception e) {
-          log.warn("Wasn't able to send update to {}: ", webSocketSession.getRemoteAddress(), e);
-        }
-      }
-      return webSocketSessions;
-    });
+      gameIdToParticipants.getOrDefault(gameEvent.gameId(), Collections.emptySet())
+        .forEach(wsSession -> {
+          try {
+            wsSession.sendMessage(new TextMessage(payload));
+          } catch (Exception e) {
+            log.warn("Wasn't able to send update to {}: ", wsSession.getRemoteAddress(), e);
+          }
+        });
+    } catch (JsonProcessingException e) {
+      log.error("Wasn't able to convert event {}: ", gameEvent, e);
+    }
   }
 
 }

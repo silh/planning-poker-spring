@@ -1,23 +1,32 @@
 package com.silh.planningpokerspring.domain;
 
+import com.silh.planningpokerspring.service.GameEventsSubscriber;
 import lombok.Data;
 
+import java.time.Instant;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.concurrent.atomic.AtomicReference;
 
 @Data
 public class Game {
   private final String id;
   private final Player creator;
-  private final Map<String, Player> participants = new ConcurrentHashMap<>();
-  private final Map<String, Long> votes = new ConcurrentHashMap<>();
-  private final AtomicReference<GameState> state = new AtomicReference<>(GameState.NOT_STARTED);
+  private final Map<String, Player> participants = new HashMap<>();
+  private final Map<String, Long> votes = new HashMap<>();
+  private final List<GameEventsSubscriber> eventsSubscribers;
+
+  private final Instant createdAt = Instant.now();
+  private GameState state = GameState.NOT_STARTED;
 
   public Game(String id, Player creator) {
+    this(id, creator, List.of());
+  }
+
+  public Game(String id, Player creator, List<GameEventsSubscriber> eventsSubscribers) {
     this.creator = creator;
     this.id = id;
+    this.eventsSubscribers = eventsSubscribers;
   }
 
   /**
@@ -27,7 +36,7 @@ public class Game {
    */
   public void transitionTo(GameState nextState) {
     // Simple implementation, transition to any state is possible.
-    state.set(nextState);
+    this.state = nextState;
     if (nextState == GameState.VOTING
       || nextState == GameState.NOT_STARTED) {
       votes.clear();
@@ -41,7 +50,17 @@ public class Game {
    * @return - if participant was added.
    */
   public boolean addParticipant(Player player) {
-    return participants.putIfAbsent(player.getId(), player) == null;
+    return participants.putIfAbsent(player.id(), player) == null;
+  }
+
+  /**
+   * Remove participant of the game.
+   *
+   * @param playerId - ID of a player to remove.
+   * @return - if participant was removed.
+   */
+  public boolean removeParticipant(String playerId) {
+    return participants.remove(playerId) != null;
   }
 
   /**
@@ -62,7 +81,7 @@ public class Game {
    * @return - current state of the game.
    */
   public GameState getState() {
-    return state.get();
+    return state;
   }
 
   /**

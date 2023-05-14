@@ -1,7 +1,6 @@
 package com.silh.planningpokerspring.converter;
 
 import com.silh.planningpokerspring.domain.Game;
-import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.PlayerDto;
 import org.springframework.lang.Nullable;
@@ -16,6 +15,12 @@ import java.util.stream.Collectors;
 @Component
 public class GameConverterImpl implements GameConverter {
 
+  private final PlayerConverter playerConverter;
+
+  public GameConverterImpl(PlayerConverter playerConverter) {
+    this.playerConverter = playerConverter;
+  }
+
   @Override
   @Nullable
   public GameDto convert(@Nullable Game game) {
@@ -24,21 +29,18 @@ public class GameConverterImpl implements GameConverter {
     }
     return new GameDto(
       game.getId(),
-      toPlayerDto(game.getCreator()),
+      playerConverter.convert(game.getCreator()),
       game.getState(),
       convertParticipants(game),
       game.getVotes()
     );
   }
 
-  private static Map<String, PlayerDto> convertParticipants(Game game) {
+  private Map<String, PlayerDto> convertParticipants(Game game) {
     return game.getParticipants()
       .entrySet()
       .stream()
-      .collect(Collectors.toMap(Map.Entry::getKey, entry -> toPlayerDto(entry.getValue())));
+      .collect(Collectors.toMap(Map.Entry::getKey, entry -> playerConverter.convert(entry.getValue())));
   }
 
-  private static PlayerDto toPlayerDto(Player player) {
-    return new PlayerDto(player.getName());
-  }
 }

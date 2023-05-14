@@ -2,8 +2,6 @@ package com.silh.planningpokerspring.request.ws;
 
 import com.fasterxml.jackson.annotation.JsonSubTypes;
 import com.fasterxml.jackson.annotation.JsonTypeInfo;
-import lombok.AllArgsConstructor;
-import lombok.Getter;
 
 /**
  * A wrapper for messages sent over WebSocket channel to the client or received from it.
@@ -14,12 +12,8 @@ import lombok.Getter;
   property = "channel")
 @JsonSubTypes({
   @JsonSubTypes.Type(value = JoinMessage.class, name = "join"),
-  @JsonSubTypes.Type(value = VoteMessage.class, name = "vote")
+  @JsonSubTypes.Type(value = VoteMessage.class, name = "vote"),
+  @JsonSubTypes.Type(value = TransitionMessage.class, name = "transition")
 })
-@AllArgsConstructor
-@Getter
-public sealed abstract class WsMessage<T> permits JoinMessage, VoteMessage {
-  private final IncomingChannel channel;
-  private final T data;
-
+public sealed interface WsMessage permits JoinMessage, VoteMessage, TransitionMessage {
 }
