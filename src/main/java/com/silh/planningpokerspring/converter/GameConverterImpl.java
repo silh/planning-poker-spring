@@ -29,6 +29,7 @@ public class GameConverterImpl implements GameConverter {
     }
     return new GameDto(
       game.getId(),
+      game.getName(),
       playerConverter.convert(game.getCreator()),
       game.getState(),
       convertParticipants(game),

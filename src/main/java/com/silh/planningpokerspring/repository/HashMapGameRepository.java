@@ -21,15 +21,9 @@ public class HashMapGameRepository implements GameRepository {
     this.idGenerator = idGenerator;
   }
 
-  /**
-   * Create a new game, assign ID to it and store it.
-   *
-   * @param creator - creator of the new game.
-   * @return - game with id and creator assigned to it.
-   */
   @Override
-  public Game create(Player creator) {
-    return insertNewGame(creator);
+  public Game create(String gameName, Player creator) {
+    return insertNewGame(gameName, creator);
   }
 
   @Override
@@ -64,12 +58,12 @@ public class HashMapGameRepository implements GameRepository {
     games.remove(id);
   }
 
-  private Game insertNewGame(Player creator) {
+  private Game insertNewGame(String gameName, Player cretor) {
     Game game;
     Game oldGame;
     do {
       final String newId = idGenerator.generate();
-      game = new Game(newId, creator);
+      game = new Game(newId, gameName, cretor);
       oldGame = games.putIfAbsent(newId, game);
     } while (oldGame != null);
     return game;

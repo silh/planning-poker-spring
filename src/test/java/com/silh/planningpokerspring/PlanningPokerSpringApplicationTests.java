@@ -66,7 +66,7 @@ class PlanningPokerSpringApplicationTests {
     final PlayerDto joiner = createUser("joiner");
 
     //Create a game
-    final NewGameRequest newGameRequest = new NewGameRequest("harry", creator.id());
+    final NewGameRequest newGameRequest = new NewGameRequest("poker", creator.id());
     final ResponseEntity<GameDto> response = restTemplate.postForEntity(gameApiPath, newGameRequest, GameDto.class);
     assertThat(response.getStatusCode()).isEqualTo(HttpStatus.OK);
 
@@ -109,6 +109,7 @@ class PlanningPokerSpringApplicationTests {
     GameEvent transitionEvent = wsHandler.send(new TransitionMessage(nextState));
     ongoingGame = new GameDto(
       ongoingGame.id(),
+      newGameRequest.gameName(),
       ongoingGame.creator(),
       nextState,
       ongoingGame.participants(),

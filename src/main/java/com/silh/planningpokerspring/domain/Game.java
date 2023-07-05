@@ -11,6 +11,7 @@ import java.util.Map;
 @Data
 public class Game {
   private final String id;
+  private final String name;
   private final Player creator;
   private final Map<String, Player> participants = new HashMap<>();
   private final Map<String, Long> votes = new HashMap<>();
@@ -19,12 +20,13 @@ public class Game {
   private final Instant createdAt = Instant.now();
   private GameState state = GameState.NOT_STARTED;
 
-  public Game(String id, Player creator) {
-    this(id, creator, List.of());
+  public Game(String id, String name, Player creator) {
+    this(id, name, creator, List.of());
   }
 
-  public Game(String id, Player creator, List<GameEventsSubscriber> eventsSubscribers) {
+  public Game(String id, String name, Player creator, List<GameEventsSubscriber> eventsSubscribers) {
     this.creator = creator;
+    this.name = name;
     this.id = id;
     this.eventsSubscribers = eventsSubscribers;
   }

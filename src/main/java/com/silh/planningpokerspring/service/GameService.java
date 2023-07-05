@@ -2,6 +2,7 @@ package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
 
 import java.util.List;
 import java.util.Optional;
@@ -13,7 +14,7 @@ public interface GameService {
    * @param creatorId - id of game creator.
    * @return - created Game.
    */
-  GameDto createGame(String creatorId);
+  GameDto createGame(NewGameRequest creatorId);
 
   /**
    * List of running games.

@@ -11,10 +11,10 @@ public interface GameRepository {
   /**
    * Create a new game, assign ID to it and store it.
    *
-   * @param creator - creator of the new game.
+   * @param req - creator of the new game.
    * @return - game with id and creator assigned to it.
    */
-  Game create(Player creator);
+  Game create(String gameName, Player creator);
 
   /**
    * Get game by ID.

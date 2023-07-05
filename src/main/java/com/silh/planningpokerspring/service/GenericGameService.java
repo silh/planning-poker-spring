@@ -7,6 +7,7 @@ import com.silh.planningpokerspring.exception.UserNotFoundException;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
 import com.silh.planningpokerspring.service.events.*;
 import org.springframework.context.ApplicationEventPublisher;
 
@@ -45,11 +46,11 @@ public class GenericGameService implements GameService {
   }
 
   @Override
-  public GameDto createGame(String creatorId) {
+  public GameDto createGame(NewGameRequest req) {
     // throw an exception for now, better handled by Result
-    final var creator = userRepository.find(creatorId)
-      .orElseThrow(() -> new UserNotFoundException(String.format("user %s not found", creatorId)));
-    return doWriteLocked(() -> gameConverter.convert(gameRepository.create(creator)));
+    final var creator = userRepository.find(req.creatorId())
+      .orElseThrow(() -> new UserNotFoundException(String.format("user %s not found", req.creatorId())));
+    return doWriteLocked(() -> gameConverter.convert(gameRepository.create(req.gameName(), creator)));
   }
 
   @Override

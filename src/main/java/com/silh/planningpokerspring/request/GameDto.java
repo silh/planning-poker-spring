@@ -9,6 +9,7 @@ import java.util.Map;
  */
 public record GameDto(
   String id,
+  String name,
   PlayerDto creator,
   GameState state,
   Map<String, PlayerDto> participants,

@@ -16,7 +16,7 @@ class InMemoryGameRepositoryTest {
   @Test
   void canCreateNewGame() {
     final Player player = getGenericPlayer();
-    final Game game = gameRepository.create(player);
+    final Game game = gameRepository.create("name", player);
     assertThat(game).isNotNull();
     assertThat(game.getCreator()).isEqualTo(player);
     assertThat(game.getId()).isNotNull();
@@ -24,14 +24,14 @@ class InMemoryGameRepositoryTest {
 
   @Test
   void idsShouldBeUnique() {
-    final Game game1 = gameRepository.create(getGenericPlayer());
-    final Game game2 = gameRepository.create(getGenericPlayer());
+    final Game game1 = gameRepository.create("name", getGenericPlayer());
+    final Game game2 = gameRepository.create("name2", getGenericPlayer());
     assertThat(game1.getId()).isNotEqualTo(game2.getId());
   }
 
   @Test
   void canGetCreatedGame() {
-    final Game game = gameRepository.create(getGenericPlayer());
+    final Game game = gameRepository.create("name", getGenericPlayer());
 
     final Optional<Game> getGameResult = gameRepository.find(game.getId());
     assertThat(getGameResult)
@@ -41,14 +41,14 @@ class InMemoryGameRepositoryTest {
 
   @Test
   void updatingNonexistentGameReturnEmpty() {
-    final Optional<Game> updatedGame = gameRepository.update(new Game("someId", getGenericPlayer()));
+    final Optional<Game> updatedGame = gameRepository.update(new Game("someId", "name", getGenericPlayer()));
     assertThat(updatedGame)
       .isNotPresent();
   }
 
   @Test
   void canDeleteExistingGame() {
-    final Game game = gameRepository.create(getGenericPlayer());
+    final Game game = gameRepository.create("name", getGenericPlayer());
     gameRepository.delete(game.getId());
 
     final Optional<Game> getGameResult = gameRepository.find(game.getId());

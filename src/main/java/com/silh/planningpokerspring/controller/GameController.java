@@ -28,13 +28,10 @@ public class GameController {
     consumes = MediaType.APPLICATION_JSON_VALUE
   )
   public ResponseEntity<GameDto> startGame(@RequestBody NewGameRequest req) {
-    return ok().body(service.createGame(req.creatorId()));
+    return ok().body(service.createGame(req));
   }
 
-  @GetMapping(
-    produces = MediaType.APPLICATION_JSON_VALUE,
-    consumes = MediaType.APPLICATION_JSON_VALUE
-  )
+  @GetMapping(produces = MediaType.APPLICATION_JSON_VALUE)
   public ResponseEntity<List<GameDto>> getGames() {
     return ok().body(service.getGames());
   }

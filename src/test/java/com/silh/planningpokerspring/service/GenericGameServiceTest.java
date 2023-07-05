@@ -8,6 +8,7 @@ import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
+import com.silh.planningpokerspring.request.NewGameRequest;
 import com.silh.planningpokerspring.request.PlayerDto;
 import org.junit.jupiter.api.Test;
 import org.springframework.context.ApplicationEventPublisher;
@@ -37,18 +38,18 @@ class GenericGameServiceTest {
   @Test
   void canCreateGame() {
     final Player creator = new Player("1", "2");
-    final Game createdGame = new Game("id", creator);
-    when(mockGameRepository.create(creator)).thenReturn(createdGame);
+    final Game createdGame = new Game("id", "name", creator);
+    when(mockGameRepository.create("name", creator)).thenReturn(createdGame);
     when(mockUserRepository.find(creator.id())).thenReturn(Optional.of(creator));
 
-    final GameDto result = gameService.createGame(creator.id());
+    final GameDto result = gameService.createGame(new NewGameRequest("name", creator.id()));
     isGameDtoEqualToGame(result, createdGame);
   }
 
   @Test
   void canGetAGame() {
     final Player creator = new Player("1", "2");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     when(mockGameRepository.find(expectedGame.getId())).thenReturn(Optional.of(expectedGame));
 
     final Optional<GameDto> result = gameService.getGame(expectedGame.getId());
@@ -68,7 +69,7 @@ class GenericGameServiceTest {
   @Test
   void canJoinGame() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     final Player player = new Player("2", "2");
     when(mockGameRepository.find(expectedGame.getId())).thenReturn(Optional.of(expectedGame));
     when(mockUserRepository.find(player.id())).thenReturn(Optional.of(player));
@@ -92,7 +93,7 @@ class GenericGameServiceTest {
   @Test
   void creatorCanTransitionGameToAnotherStage() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
 
@@ -106,7 +107,7 @@ class GenericGameServiceTest {
   @Test
   void canVote() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     final Player voter = new Player("2", "voter");
     expectedGame.addParticipant(voter);
     when(mockGameRepository.find(expectedGame.getId()))
@@ -120,7 +121,7 @@ class GenericGameServiceTest {
   @Test
   void cantVoteIfNotParticipant() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     final Player voter = new Player("2", "voter");
     when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
@@ -133,7 +134,7 @@ class GenericGameServiceTest {
   @Test
   void canGetGames() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", creator);
+    final Game expectedGame = new Game("id", "name", creator);
     when((mockGameRepository.findAll())).thenReturn(List.of(expectedGame));
 
     List<GameDto> actualGames = gameService.getGames();
@@ -141,7 +142,7 @@ class GenericGameServiceTest {
     isGameDtoEqualToGame(actualGames.get(0), expectedGame);
 
     final Player creator2 = new Player("2", "1");
-    final Game expectedGame2 = new Game("id2", creator2);
+    final Game expectedGame2 = new Game("id2", "name", creator2);
     when((mockGameRepository.findAll())).thenReturn(List.of(expectedGame, expectedGame2));
     actualGames = gameService.getGames();
     assertThat(actualGames).hasSize(2);
