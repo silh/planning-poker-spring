@@ -1,11 +1,14 @@
 package com.silh.planningpokerspring.controller;
 
+import com.silh.planningpokerspring.exception.UserNotFoundException;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.NewGameRequest;
 import com.silh.planningpokerspring.service.GameService;
 import com.silh.planningpokerspring.service.UserService;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
+import org.springframework.web.ErrorResponse;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -44,6 +47,11 @@ public class GameController {
     return service.getGame(gameId)
       .map(game -> ok().body(game))
       .orElseGet(() -> notFound().build());
+  }
+
+  @ExceptionHandler(UserNotFoundException.class)
+  public ErrorResponse handleUserNotFound(UserNotFoundException e) {
+    return ErrorResponse.create(e, HttpStatus.NOT_FOUND, "User not found");
   }
 
 }

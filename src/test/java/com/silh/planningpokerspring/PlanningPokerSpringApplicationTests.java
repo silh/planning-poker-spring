@@ -14,6 +14,7 @@ import com.silh.planningpokerspring.service.events.GameEvent;
 import com.silh.planningpokerspring.service.events.PlayerJoinedEvent;
 import com.silh.planningpokerspring.service.events.TransitionEvent;
 import com.silh.planningpokerspring.service.events.VoteEvent;
+import org.assertj.core.api.InstanceOfAssertFactories;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.springframework.boot.test.context.SpringBootTest;
@@ -21,6 +22,7 @@ import org.springframework.boot.test.web.server.LocalServerPort;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.lang.NonNull;
+import org.springframework.web.client.HttpClientErrorException;
 import org.springframework.web.client.RestOperations;
 import org.springframework.web.client.RestTemplate;
 import org.springframework.web.socket.TextMessage;
@@ -33,6 +35,7 @@ import java.io.IOException;
 import java.util.concurrent.*;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatThrownBy;
 
 @SpringBootTest(webEnvironment = SpringBootTest.WebEnvironment.RANDOM_PORT)
 class PlanningPokerSpringApplicationTests {
@@ -123,6 +126,14 @@ class PlanningPokerSpringApplicationTests {
     final ResponseEntity<GameDto> votedGame =
       restTemplate.getForEntity(getGamePath, GameDto.class);
     assertThat(votedGame.getBody()).isEqualTo(ongoingGame);
+  }
+
+  @Test
+  void userNotFoundResultsIn404() {
+    final NewGameRequest newGameRequest = new NewGameRequest("poker", "id");
+    assertThatThrownBy(() -> restTemplate.postForEntity(gameApiPath, newGameRequest, GameDto.class))
+      .asInstanceOf(InstanceOfAssertFactories.type(HttpClientErrorException.class))
+      .satisfies(e -> assertThat(e.getStatusCode()).isEqualTo(HttpStatus.NOT_FOUND));
   }
 
   private PlayerDto createUser(String name) {
