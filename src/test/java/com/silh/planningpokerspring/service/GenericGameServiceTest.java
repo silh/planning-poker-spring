@@ -76,7 +76,7 @@ class GenericGameServiceTest {
 
     final boolean joined = gameService.joinGame(expectedGame.getId(), player.id());
     assertThat(joined).isTrue();
-    assertThat(expectedGame.getParticipants()).containsEntry("2", player);
+    assertThat(expectedGame.getPlayers()).containsEntry("2", player);
   }
 
   @Test
@@ -156,10 +156,10 @@ class GenericGameServiceTest {
     assertThat(dto.id()).isEqualTo(game.getId());
     assertThat(dto.creator().name()).isEqualTo(game.getCreator().name());
     assertThat(dto.state()).isEqualTo(game.getState());
-    final Map<String, PlayerDto> participants = game.getParticipants()
+    final Map<String, PlayerDto> participants = game.getPlayers()
       .entrySet().stream()
       .collect(Collectors.toMap(Map.Entry::getKey, entry -> new PlayerDto(entry.getValue().id(), entry.getValue().id())));
-    assertThat(dto.participants()).isEqualTo(participants);
+    assertThat(dto.players()).isEqualTo(participants);
     assertThat(dto.votes()).isEqualTo(game.getVotes());
   }
 }

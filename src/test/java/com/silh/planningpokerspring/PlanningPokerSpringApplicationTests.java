@@ -79,7 +79,7 @@ class PlanningPokerSpringApplicationTests {
     assertThat(ongoingGame.id())
       .isNotNull()
       .isNotEmpty();
-    assertThat(ongoingGame.participants()).isEmpty();
+    assertThat(ongoingGame.players()).isEmpty();
     assertThat(ongoingGame.votes()).isEmpty();
     assertThat(creator).isNotNull();
     assertThat(creator.id()).isEqualTo(newGameRequest.creatorId());
@@ -94,7 +94,7 @@ class PlanningPokerSpringApplicationTests {
     var wsHandler = new SyncWebsocketHandler();
     wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
     GameEvent joinEvent = wsHandler.send(new JoinMessage(ongoingGame.id(), joiner.id()));
-    ongoingGame.participants().put(joiner.id(), joiner);
+    ongoingGame.players().put(joiner.id(), joiner);
     assertThat(joinEvent)
       .isEqualTo(new PlayerJoinedEvent(ongoingGame.id(), joiner));
 
@@ -115,7 +115,7 @@ class PlanningPokerSpringApplicationTests {
       newGameRequest.gameName(),
       ongoingGame.creator(),
       nextState,
-      ongoingGame.participants(),
+      ongoingGame.players(),
       ongoingGame.votes()
     );
     assertThat(transitionEvent)

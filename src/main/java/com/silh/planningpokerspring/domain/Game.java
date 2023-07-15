@@ -13,7 +13,8 @@ public class Game {
   private final String id;
   private final String name;
   private final Player creator;
-  private final Map<String, Player> participants = new HashMap<>();
+  // Below maps are protected by locks in the service. TODO not ideal
+  private final Map<String, Player> players = new HashMap<>();
   private final Map<String, Long> votes = new HashMap<>();
   private final List<GameEventsSubscriber> eventsSubscribers;
 
@@ -52,7 +53,7 @@ public class Game {
    * @return - if participant was added.
    */
   public boolean addParticipant(Player player) {
-    return participants.putIfAbsent(player.id(), player) == null;
+    return players.putIfAbsent(player.id(), player) == null;
   }
 
   /**
@@ -62,7 +63,7 @@ public class Game {
    * @return - if participant was removed.
    */
   public boolean removeParticipant(String playerId) {
-    return participants.remove(playerId) != null;
+    return players.remove(playerId) != null;
   }
 
   /**
@@ -73,8 +74,11 @@ public class Game {
    * @return - true if vote was accepted, false otherwise.
    */
   public boolean addVote(String voterId, Long value) {
-    //TODO check that player belongs to a game.
-    return votes.putIfAbsent(voterId, value) == null;
+    if (players.get(voterId) == null) {
+      return false;
+    }
+    votes.put(voterId, value);
+    return true;
   }
 
   /**
@@ -87,12 +91,12 @@ public class Game {
   }
 
   /**
-   * Returns a copy of participants.
+   * Returns a copy of players.
    *
-   * @return - copy of game's participants.
+   * @return - copy of game's players.
    */
-  public Map<String, Player> getParticipants() {
-    return new HashMap<>(participants);
+  public Map<String, Player> getPlayers() {
+    return new HashMap<>(players);
   }
 
   /**

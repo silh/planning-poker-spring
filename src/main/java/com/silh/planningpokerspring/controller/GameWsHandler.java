@@ -73,6 +73,7 @@ public class GameWsHandler extends TextWebSocketHandler
       var sessionInfo = sessionToSessionInfo.get(session);
       if (sessionInfo == null) return;
       gameService.vote(sessionInfo.gameId(), sessionInfo.playerId(), voteMessage.vote());
+      log.info("Player voted: playerId={}, vote={}", sessionInfo.playerId(), voteMessage.vote());
     } catch (RuntimeException e) {
       log.error("Exception while voting, request={}: ", voteMessage, e);
     }
@@ -94,8 +95,8 @@ public class GameWsHandler extends TextWebSocketHandler
     if (!joined) {
       log.warn("Could not join the game: session={}, message={}, gameId={}",
         session.getRemoteAddress(), joinMessage, joinMessage.gameId());
-      cleanLocalMaps(session);
     }
+    log.info("Player joined the game: playerId={}, gameId={}", joinMessage.playerId(), joinMessage.gameId());
   }
 
   @Override
@@ -104,6 +105,7 @@ public class GameWsHandler extends TextWebSocketHandler
     JoinMessage joinMessage = cleanLocalMaps(session);
     if (joinMessage == null) return;
     gameService.leaveGame(joinMessage.gameId(), joinMessage.playerId()); // TODO Maybe we should not leave, just mark as inactive?
+    log.info("Player left the game: playerId={}, gameId={}", joinMessage.playerId(), joinMessage.gameId());
   }
 
   private JoinMessage cleanLocalMaps(WebSocketSession session) {

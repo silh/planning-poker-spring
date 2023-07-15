@@ -38,7 +38,7 @@ public class GameConverterImpl implements GameConverter {
   }
 
   private Map<String, PlayerDto> convertParticipants(Game game) {
-    return game.getParticipants()
+    return game.getPlayers()
       .entrySet()
       .stream()
       .collect(Collectors.toMap(Map.Entry::getKey, entry -> playerConverter.convert(entry.getValue())));

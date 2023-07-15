@@ -122,7 +122,7 @@ public class GenericGameService implements GameService {
     return doWriteLocked(() -> {
       final boolean updated = gameRepository
         .find(gameId)
-        .filter(game -> game.getParticipants().containsKey(voterId))
+        .filter(game -> game.getPlayers().containsKey(voterId))
         .map(game -> game.addVote(voterId, value))
         .orElse(false);
       publishEvent(updated, new VoteEvent(gameId, voterId, value));
