@@ -49,11 +49,15 @@ public class GameWsHandler extends TextWebSocketHandler
 
   @Override
   protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
-    final String payload = message.getPayload();
-    switch (objectMapper.readValue(payload, WsMessage.class)) {
-      case JoinMessage j -> addSession(session, j);
-      case VoteMessage v -> vote(session, v);
-      case TransitionMessage v -> transition(session, v);
+    try {
+      final String payload = message.getPayload();
+      switch (objectMapper.readValue(payload, WsMessage.class)) {
+        case JoinMessage j -> addSession(session, j);
+        case VoteMessage v -> vote(session, v);
+        case TransitionMessage v -> transition(session, v);
+      }
+    } catch (Exception e) {
+      log.info("Couldn't handle the message={}, errorMessage={}", message, e.getMessage());
     }
   }
 
