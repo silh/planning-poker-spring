@@ -30,12 +30,12 @@ class WsMessageTest {
     final var json = """
       {
         "channel" : "vote",
-        "vote": 1
+        "vote": "1"
       }
       """;
     final WsMessage wsMessage = objectMapper.readValue(json, WsMessage.class);
     assertThat(wsMessage).isInstanceOf(VoteMessage.class);
     var voteMessage = (VoteMessage) wsMessage;
-    assertThat(voteMessage).isEqualTo(new VoteMessage(1L));
+    assertThat(voteMessage).isEqualTo(new VoteMessage("1"));
   }
 }

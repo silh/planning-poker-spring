@@ -52,7 +52,7 @@ public interface GameService {
    * @param value   - value of the cast vote.
    * @return - true if vote was added, false otherwise.
    */
-  boolean vote(String gameId, String voterId, Long value);
+  boolean vote(String gameId, String voterId, String value);
 
   /**
    * Get current game state.

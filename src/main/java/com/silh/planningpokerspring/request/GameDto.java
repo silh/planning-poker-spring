@@ -13,6 +13,6 @@ public record GameDto(
   PlayerDto creator,
   GameState state,
   Map<String, PlayerDto> players,
-  Map<String, Long> votes
+  Map<String, String> votes
 ) {
 }

@@ -2,6 +2,7 @@ package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.converter.GameConverter;
 import com.silh.planningpokerspring.converter.PlayerConverter;
+import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.exception.UserNotFoundException;
 import com.silh.planningpokerspring.repository.GameRepository;
@@ -104,28 +105,35 @@ public class GenericGameService implements GameService {
   @Override
   public boolean transitionTo(String gameId, String personId, GameState nextState) {
     return doWriteLocked(() -> {
-      final boolean updated = gameRepository
+      Optional<Game> gameOptional = gameRepository
 //        .findByIdAndOwnerId(gameId, personId)
-        .find(gameId) // TODO should only owner be able to transition?
+        .find(gameId);
+      final boolean updated = gameOptional // TODO should only owner be able to transition?
         .map(game -> {
           game.transitionTo(nextState);
           return true;
         })
         .orElse(false);
-      publishEvent(updated, new TransitionEvent(gameId, nextState));
+      gameOptional.ifPresent(game -> publishEvent(true,
+        new TransitionEvent(
+          gameId,
+          nextState,
+          game.getVotes() // no need to hid stuff here, as votes could only happen in voting state,and they will be shown when moving to discussion (although it's bette rto contain that...)
+        )
+      ));
       return updated;
     });
   }
 
   @Override
-  public boolean vote(String gameId, String voterId, Long value) {
+  public boolean vote(String gameId, String voterId, String value) {
     return doWriteLocked(() -> {
       final boolean updated = gameRepository
         .find(gameId)
         .filter(game -> game.getPlayers().containsKey(voterId))
         .map(game -> game.addVote(voterId, value))
         .orElse(false);
-      publishEvent(updated, new VoteEvent(gameId, voterId, value));
+      publishEvent(updated, new VoteEvent(gameId, voterId));
       return updated;
     });
   }

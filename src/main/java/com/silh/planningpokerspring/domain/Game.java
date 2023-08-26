@@ -7,6 +7,7 @@ import java.time.Instant;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.stream.Collectors;
 
 @Data
 public class Game {
@@ -15,7 +16,7 @@ public class Game {
   private final Player creator;
   // Below maps are protected by locks in the service. TODO not ideal
   private final Map<String, Player> players = new HashMap<>();
-  private final Map<String, Long> votes = new HashMap<>();
+  private final Map<String, String> votes = new HashMap<>();
   private final List<GameEventsSubscriber> eventsSubscribers;
 
   private final Instant createdAt = Instant.now();
@@ -63,6 +64,7 @@ public class Game {
    * @return - if participant was removed.
    */
   public boolean removeParticipant(String playerId) {
+    votes.remove(playerId);
     return players.remove(playerId) != null;
   }
 
@@ -73,8 +75,8 @@ public class Game {
    * @param value   - vote value.
    * @return - true if vote was accepted, false otherwise.
    */
-  public boolean addVote(String voterId, Long value) {
-    if (players.get(voterId) == null) {
+  public boolean addVote(String voterId, String value) {
+    if (state != GameState.VOTING || players.get(voterId) == null) {
       return false;
     }
     votes.put(voterId, value);
@@ -100,11 +102,18 @@ public class Game {
   }
 
   /**
-   * Returns a copy of the votes
+   * Returns a copy of the votes. If the game state is VOTING - all votes are hidden.
    *
    * @return - copy of game's votes.
    */
-  public Map<String, Long> getVotes() {
+  public Map<String, String> getVotes() {
+    if (state == GameState.VOTING) {
+      return votes.entrySet()
+        .stream()
+        .collect(Collectors.toMap(
+          Map.Entry::getKey, e -> "*"
+        ));
+    }
     return new HashMap<>(votes);
   }
 }

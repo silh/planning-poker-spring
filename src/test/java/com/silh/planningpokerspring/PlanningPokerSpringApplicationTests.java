@@ -98,18 +98,22 @@ class PlanningPokerSpringApplicationTests {
     assertThat(joinEvent)
       .isEqualTo(new PlayerJoinedEvent(ongoingGame.id(), joiner));
 
-    //Participant can vote
-    wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
-    long voteValue = 1L;
+    //Participant can vote in voting state
+    GameState nextState = GameState.VOTING;
+    GameEvent transitionEvent = wsHandler.send(new TransitionMessage(nextState));
+    assertThat(transitionEvent)
+      .asInstanceOf(InstanceOfAssertFactories.type(TransitionEvent.class))
+      .extracting(TransitionEvent::targetState)
+      .isEqualTo(nextState);
+    var voteValue = "1";
     GameEvent voteEvent = wsHandler.send(new VoteMessage(voteValue));
     ongoingGame.votes().put(joiner.id(), voteValue);
     assertThat(voteEvent)
-      .isEqualTo(new VoteEvent(ongoingGame.id(), joiner.id(), voteValue));
+      .isEqualTo(new VoteEvent(ongoingGame.id(), joiner.id()));
 
     //Participant can transition to a new state
-    wsClient.execute(wsHandler, wsPath).get(1, TimeUnit.SECONDS);
-    GameState nextState = GameState.DISCUSSION;
-    GameEvent transitionEvent = wsHandler.send(new TransitionMessage(nextState));
+    nextState = GameState.DISCUSSION;
+    transitionEvent = wsHandler.send(new TransitionMessage(nextState));
     ongoingGame = new GameDto(
       ongoingGame.id(),
       newGameRequest.gameName(),
@@ -119,7 +123,7 @@ class PlanningPokerSpringApplicationTests {
       ongoingGame.votes()
     );
     assertThat(transitionEvent)
-      .isEqualTo(new TransitionEvent(ongoingGame.id(), nextState));
+      .isEqualTo(new TransitionEvent(ongoingGame.id(), nextState, ongoingGame.votes()));
 
     //Check game
     // FIXME should not be able to do that until the game is in the correct state
