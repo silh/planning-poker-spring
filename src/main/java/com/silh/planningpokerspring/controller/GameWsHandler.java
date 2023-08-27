@@ -48,7 +48,7 @@ public class GameWsHandler extends TextWebSocketHandler
   }
 
   @Override
-  protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) throws Exception {
+  protected void handleTextMessage(@NonNull WebSocketSession session, @NonNull TextMessage message) {
     try {
       final String payload = message.getPayload();
       switch (objectMapper.readValue(payload, WsMessage.class)) {
@@ -62,25 +62,16 @@ public class GameWsHandler extends TextWebSocketHandler
   }
 
   private void transition(WebSocketSession session, TransitionMessage transitionMessage) {
-    try {
-      log.debug("Transitioning: message={}", transitionMessage);
-      var sessionInfo = sessionToSessionInfo.get(session);
-      if (sessionInfo == null) return;
-      gameService.transitionTo(sessionInfo.gameId(), sessionInfo.playerId(), transitionMessage.nextState());
-    } catch (RuntimeException e) {
-      log.error("Exception while transitioning request={}: ", transitionMessage, e);
-    }
+    log.debug("Transitioning: message={}", transitionMessage);
+    var sessionInfo = sessionToSessionInfo.get(session);
+    if (sessionInfo == null) return;
+    gameService.transitionTo(sessionInfo.gameId(), sessionInfo.playerId(), transitionMessage.nextState());
   }
 
   private void vote(WebSocketSession session, VoteMessage voteMessage) {
-    try {
-      var sessionInfo = sessionToSessionInfo.get(session);
-      if (sessionInfo == null) return;
-      gameService.vote(sessionInfo.gameId(), sessionInfo.playerId(), voteMessage.vote());
-      log.info("Player voted: playerId={}, vote={}", sessionInfo.playerId(), voteMessage.vote());
-    } catch (RuntimeException e) {
-      log.error("Exception while voting, request={}: ", voteMessage, e);
-    }
+    var sessionInfo = sessionToSessionInfo.get(session);
+    if (sessionInfo == null) return;
+    gameService.vote(sessionInfo.gameId(), sessionInfo.playerId(), voteMessage.vote());
   }
 
   private void addSession(WebSocketSession session, JoinMessage joinMessage) {
@@ -95,16 +86,10 @@ public class GameWsHandler extends TextWebSocketHandler
         k -> ConcurrentHashMap.newKeySet()
       )
       .add(session);
-    boolean joined = gameService.joinGame(joinMessage.gameId(), joinMessage.playerId());
-    if (!joined) {
-      log.warn("Could not join the game: session={}, message={}, gameId={}",
-        session.getRemoteAddress(), joinMessage, joinMessage.gameId());
-    }
-    log.info("Player joined the game: playerId={}, gameId={}", joinMessage.playerId(), joinMessage.gameId());
+    gameService.joinGame(joinMessage.gameId(), joinMessage.playerId());
   }
 
   @Override
-  // TODO I think I should rather create a some self-handling game instance for each game
   public void afterConnectionClosed(@NonNull WebSocketSession session, @NonNull CloseStatus status) {
     JoinMessage joinMessage = cleanLocalMaps(session);
     if (joinMessage == null) return;
@@ -117,10 +102,7 @@ public class GameWsHandler extends TextWebSocketHandler
     if (joinMessage == null) {
       return null;
     }
-    gameIdToParticipants.compute(joinMessage.gameId(), (k, sessions) -> {
-      if (sessions == null) {
-        return null;
-      }
+    gameIdToParticipants.computeIfPresent(joinMessage.gameId(), (k, sessions) -> {
       sessions.remove(session);
       return sessions.isEmpty() ? null : sessions;
     });

@@ -1,24 +1,35 @@
 package com.silh.planningpokerspring.repository;
 
+import com.silh.planningpokerspring.converter.PlayerConverter;
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.service.StringIdGenerator;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.ArrayList;
-import java.util.HashMap;
 import java.util.List;
 import java.util.Optional;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.ConcurrentMap;
 
 /**
  * Expected to be used only by one thread at a time.
  */
 public class HashMapGameRepository implements GameRepository {
 
-  private final HashMap<String, Game> games = new HashMap<>();
+  private final ConcurrentMap<String, Game> games = new ConcurrentHashMap<>();
   private final StringIdGenerator idGenerator;
+  // TODO The bellow 2 are just to create games, change to factory?
+  private final ApplicationEventPublisher eventPublisher;
+  private final PlayerConverter playerConverter;
 
-  public HashMapGameRepository(StringIdGenerator idGenerator) {
+  public HashMapGameRepository(
+    StringIdGenerator idGenerator,
+    ApplicationEventPublisher eventPublisher,
+    PlayerConverter playerConverter) {
     this.idGenerator = idGenerator;
+    this.eventPublisher = eventPublisher;
+    this.playerConverter = playerConverter;
   }
 
   @Override
@@ -33,7 +44,6 @@ public class HashMapGameRepository implements GameRepository {
 
   @Override
   public List<Game> findAll() {
-    // TODO this is unsafe and should be fixed.
     return new ArrayList<>(games.values());
   }
 
@@ -58,12 +68,12 @@ public class HashMapGameRepository implements GameRepository {
     games.remove(id);
   }
 
-  private Game insertNewGame(String gameName, Player cretor) {
+  private Game insertNewGame(String gameName, Player creator) {
     Game game;
     Game oldGame;
     do {
       final String newId = idGenerator.generate();
-      game = new Game(newId, gameName, cretor);
+      game = new Game(newId, gameName, creator, eventPublisher, playerConverter);
       oldGame = games.putIfAbsent(newId, game);
     } while (oldGame != null);
     return game;

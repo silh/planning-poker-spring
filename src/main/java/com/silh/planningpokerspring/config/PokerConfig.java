@@ -49,19 +49,21 @@ public class PokerConfig {
   }
 
   @Bean
-  public GameRepository gameRepository(StringIdGenerator idGenerator) {
-    return new HashMapGameRepository(idGenerator);
+  public GameRepository gameRepository(
+    StringIdGenerator idGenerator,
+    ApplicationEventPublisher eventPublisher,
+    PlayerConverter playerConverter
+  ) {
+    return new HashMapGameRepository(idGenerator, eventPublisher, playerConverter);
   }
 
   @Bean
   public GameService gameService(
     GameRepository gameRepository,
     UserRepository userRepository,
-    GameConverter gameConverter,
-    PlayerConverter playerConverter,
-    ApplicationEventPublisher eventPublisher
+    GameConverter gameConverter
   ) {
-    return new GenericGameService(gameRepository, userRepository, gameConverter, playerConverter, eventPublisher);
+    return new GenericGameService(gameRepository, userRepository, gameConverter);
   }
 
   @Bean

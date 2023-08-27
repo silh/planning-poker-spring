@@ -1,12 +1,18 @@
 package com.silh.planningpokerspring.domain;
 
-import com.silh.planningpokerspring.service.GameEventsSubscriber;
+import com.silh.planningpokerspring.converter.PlayerConverter;
+import com.silh.planningpokerspring.service.events.PlayerJoinedEvent;
+import com.silh.planningpokerspring.service.events.PlayerLeftEvent;
+import com.silh.planningpokerspring.service.events.TransitionEvent;
+import com.silh.planningpokerspring.service.events.VoteEvent;
 import lombok.Data;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
 import java.util.HashMap;
-import java.util.List;
 import java.util.Map;
+import java.util.concurrent.Executor;
+import java.util.concurrent.Executors;
 import java.util.stream.Collectors;
 
 @Data
@@ -14,23 +20,46 @@ public class Game {
   private final String id;
   private final String name;
   private final Player creator;
-  // Below maps are protected by locks in the service. TODO not ideal
   private final Map<String, Player> players = new HashMap<>();
   private final Map<String, String> votes = new HashMap<>();
-  private final List<GameEventsSubscriber> eventsSubscribers;
+  private final ApplicationEventPublisher eventPublisher; // TODO this is not async...
+  private final PlayerConverter playerConverter;
 
   private final Instant createdAt = Instant.now();
+  private final Executor executor;
   private GameState state = GameState.NOT_STARTED;
 
-  public Game(String id, String name, Player creator) {
-    this(id, name, creator, List.of());
+  public Game(
+    String id,
+    String name,
+    Player creator,
+    ApplicationEventPublisher eventPublisher,
+    PlayerConverter playerConverter
+  ) {
+    this(
+      id,
+      name,
+      creator,
+      eventPublisher,
+      playerConverter,
+      Executors.newSingleThreadExecutor(Thread.ofVirtual().factory())
+    );
   }
 
-  public Game(String id, String name, Player creator, List<GameEventsSubscriber> eventsSubscribers) {
+  public Game(
+    String id,
+    String name,
+    Player creator,
+    ApplicationEventPublisher eventPublisher,
+    PlayerConverter playerConverter,
+    Executor executor // Used in tests
+  ) {
     this.creator = creator;
     this.name = name;
     this.id = id;
-    this.eventsSubscribers = eventsSubscribers;
+    this.eventPublisher = eventPublisher;
+    this.playerConverter = playerConverter;
+    this.executor = executor;
   }
 
   /**
@@ -39,33 +68,40 @@ public class Game {
    * @param nextState - state to which we move.
    */
   public void transitionTo(GameState nextState) {
-    // Simple implementation, transition to any state is possible.
-    this.state = nextState;
-    if (nextState == GameState.VOTING
-      || nextState == GameState.NOT_STARTED) {
-      votes.clear();
-    }
+    executor.execute(() -> {
+      // Simple implementation, transition to any state is possible.
+      this.state = nextState;
+      if (nextState == GameState.VOTING
+        || nextState == GameState.NOT_STARTED) {
+        votes.clear();
+      }
+      this.eventPublisher.publishEvent(new TransitionEvent(this.id, this.state, this.getVotes()));
+    });
   }
 
   /**
    * Add participant to the game.
    *
    * @param player - new participant.
-   * @return - if participant was added.
    */
-  public boolean addParticipant(Player player) {
-    return players.putIfAbsent(player.id(), player) == null;
+  public void addParticipant(Player player) {
+    executor.execute(() -> {
+      players.putIfAbsent(player.id(), player);
+      this.eventPublisher.publishEvent(new PlayerJoinedEvent(this.id, playerConverter.convert(player)));
+    });
   }
 
   /**
    * Remove participant of the game.
    *
    * @param playerId - ID of a player to remove.
-   * @return - if participant was removed.
    */
-  public boolean removeParticipant(String playerId) {
-    votes.remove(playerId);
-    return players.remove(playerId) != null;
+  public void removeParticipant(String playerId) {
+    executor.execute(() -> {
+      votes.remove(playerId);
+      players.remove(playerId);
+      this.eventPublisher.publishEvent(new PlayerLeftEvent(this.id, playerId));
+    });
   }
 
   /**
@@ -73,15 +109,18 @@ public class Game {
    *
    * @param voterId - ID of a voting person.
    * @param value   - vote value.
-   * @return - true if vote was accepted, false otherwise.
    */
-  public boolean addVote(String voterId, String value) {
-    if (state != GameState.VOTING || players.get(voterId) == null) {
-      return false;
-    }
-    votes.put(voterId, value);
-    return true;
+  public void addVote(String voterId, String value) {
+    executor.execute(() -> {
+      if (state != GameState.VOTING || players.get(voterId) == null) {
+        return;
+      }
+      votes.put(voterId, value);
+      this.eventPublisher.publishEvent(new VoteEvent(id, voterId));
+    });
   }
+
+  // TODO Below methods should be reworked to avoid concurrency problems
 
   /**
    * Get current game state unwrapped from AtomicReference.

@@ -1,23 +1,16 @@
 package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.converter.GameConverter;
-import com.silh.planningpokerspring.converter.PlayerConverter;
-import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.exception.UserNotFoundException;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
 import com.silh.planningpokerspring.request.GameDto;
 import com.silh.planningpokerspring.request.NewGameRequest;
-import com.silh.planningpokerspring.service.events.*;
-import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Comparator;
 import java.util.List;
 import java.util.Optional;
-import java.util.concurrent.locks.ReadWriteLock;
-import java.util.concurrent.locks.ReentrantReadWriteLock;
-import java.util.function.Supplier;
 
 /**
  * This class is responsible for all things related to managing running games of planing poker.
@@ -28,22 +21,13 @@ public class GenericGameService implements GameService {
   private final GameRepository gameRepository;
   private final UserRepository userRepository;
   private final GameConverter gameConverter;
-  private final PlayerConverter playerConverter;
-  private final ApplicationEventPublisher eventPublisher;
-
-  private final ReadWriteLock lock;
 
   public GenericGameService(GameRepository gameRepository,
                             UserRepository userRepository,
-                            GameConverter gameConverter,
-                            PlayerConverter playerConverter,
-                            ApplicationEventPublisher eventPublisher) {
+                            GameConverter gameConverter) {
     this.gameRepository = gameRepository;
     this.userRepository = userRepository;
     this.gameConverter = gameConverter;
-    this.playerConverter = playerConverter;
-    this.eventPublisher = eventPublisher;
-    this.lock = new ReentrantReadWriteLock();
   }
 
   @Override
@@ -51,132 +35,54 @@ public class GenericGameService implements GameService {
     // throw an exception for now, better handled by Result
     final var creator = userRepository.find(req.creatorId())
       .orElseThrow(() -> new UserNotFoundException(String.format("user %s not found", req.creatorId())));
-    return doWriteLocked(() -> gameConverter.convert(gameRepository.create(req.gameName(), creator)));
+    return gameConverter.convert(gameRepository.create(req.gameName(), creator));
   }
 
   @Override
   public List<GameDto> getGames() {
     //noinspection DataFlowIssue
-    return doReadLocked(() ->
-      gameRepository.findAll()
-        .stream()
-        .map(gameConverter::convert) // Can't really return null here.
-        .sorted(Comparator.comparing(GameDto::id))// TODO we should order by name but our games don't have names yet.
-        .toList()
-    );
+    return gameRepository.findAll()
+      .stream()
+      .map(gameConverter::convert) // Can't really return null here.
+      .sorted(Comparator.comparing(GameDto::name))
+      .toList();
   }
 
   @Override
   public Optional<GameDto> getGame(String gameId) {
-    return doReadLocked(() ->
-      gameRepository.find(gameId)
-        .map(gameConverter::convert)
-    );
+    return gameRepository.find(gameId)
+      .map(gameConverter::convert);
   }
 
   @Override
-  public boolean joinGame(String gameId, String playerId) {
-    return doWriteLocked(() -> {
-      // TODO this is ugly, improve it. Maybe move it to game itself?
-      return userRepository.find(playerId)
-        .map(player -> {
-          final boolean updated = gameRepository.find(gameId)
-            .map(game -> game.addParticipant(player))
-            .orElse(false);
-          // TODO remove side effect
-          publishEvent(updated, new PlayerJoinedEvent(gameId, playerConverter.convert(player)));
-          return updated;
-        })
-        .orElse(false);
-    });
+  public void joinGame(String gameId, String playerId) {
+    userRepository.find(playerId)
+      .ifPresent(player -> {
+        gameRepository.find(gameId)
+          .ifPresent(game -> game.addParticipant(player));
+      });
   }
 
   @Override
-  public boolean leaveGame(String gameId, String playerId) {
-    return doWriteLocked(() -> {
-      final boolean updated = gameRepository.find(gameId)
-        .map(game -> game.removeParticipant(playerId))
-        .orElse(false);
-      publishEvent(updated, new PlayerLeftEvent(gameId, playerId));
-      return updated;
-    });
+  public void leaveGame(String gameId, String playerId) {
+    gameRepository.find(gameId)
+      .ifPresent(game -> game.removeParticipant(playerId));
   }
 
   @Override
-  public boolean transitionTo(String gameId, String personId, GameState nextState) {
-    return doWriteLocked(() -> {
-      Optional<Game> gameOptional = gameRepository
-//        .findByIdAndOwnerId(gameId, personId)
-        .find(gameId);
-      final boolean updated = gameOptional // TODO should only owner be able to transition?
-        .map(game -> {
-          game.transitionTo(nextState);
-          return true;
-        })
-        .orElse(false);
-      gameOptional.ifPresent(game -> publishEvent(true,
-        new TransitionEvent(
-          gameId,
-          nextState,
-          game.getVotes() // no need to hid stuff here, as votes could only happen in voting state,and they will be shown when moving to discussion (although it's bette rto contain that...)
-        )
-      ));
-      return updated;
-    });
+  public void transitionTo(String gameId, String personId, GameState nextState) {
+    gameRepository
+//      .findByIdAndOwnerId(gameId, personId)// TODO should only owner be able to transition?
+      .find(gameId)
+      .ifPresent(game -> game.transitionTo(nextState));
   }
 
   @Override
-  public boolean vote(String gameId, String voterId, String value) {
-    return doWriteLocked(() -> {
-      final boolean updated = gameRepository
-        .find(gameId)
-        .filter(game -> game.getPlayers().containsKey(voterId))
-        .map(game -> game.addVote(voterId, value))
-        .orElse(false);
-      publishEvent(updated, new VoteEvent(gameId, voterId));
-      return updated;
-    });
+  public void vote(String gameId, String voterId, String value) {
+    gameRepository
+      .find(gameId)
+      .filter(game -> game.getPlayers().containsKey(voterId))
+      .ifPresent(game -> game.addVote(voterId, value));
   }
 
-  private void doReadLocked(Runnable action) {
-    lock.readLock().lock();
-    try {
-      action.run();
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
-  private <T> T doReadLocked(Supplier<T> action) {
-    lock.readLock().lock();
-    try {
-      return action.get();
-    } finally {
-      lock.readLock().unlock();
-    }
-  }
-
-  private void doWriteLocked(Runnable action) {
-    lock.writeLock().lock();
-    try {
-      action.run();
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  private <T> T doWriteLocked(Supplier<T> action) {
-    lock.writeLock().lock();
-    try {
-      return action.get();
-    } finally {
-      lock.writeLock().unlock();
-    }
-  }
-
-  private void publishEvent(boolean updated, GameEvent event) {
-    if (updated) {
-      eventPublisher.publishEvent(event);
-    }
-  }
 }

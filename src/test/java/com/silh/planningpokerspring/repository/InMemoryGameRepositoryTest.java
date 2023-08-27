@@ -1,17 +1,22 @@
 package com.silh.planningpokerspring.repository;
 
+import com.silh.planningpokerspring.converter.PlayerConverter;
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.service.StringIdGenerator;
 import org.junit.jupiter.api.Test;
+import org.springframework.context.ApplicationEventPublisher;
 
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.mockito.Mockito.mock;
 
 class InMemoryGameRepositoryTest {
 
-  private final GameRepository gameRepository = new HashMapGameRepository(new StringIdGenerator());
+  private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
+  private final PlayerConverter playerConverter = new PlayerConverter();
+  private final GameRepository gameRepository = new HashMapGameRepository(new StringIdGenerator(), eventPublisher, playerConverter);
 
   @Test
   void canCreateNewGame() {
@@ -41,7 +46,7 @@ class InMemoryGameRepositoryTest {
 
   @Test
   void updatingNonexistentGameReturnEmpty() {
-    final Optional<Game> updatedGame = gameRepository.update(new Game("someId", "name", getGenericPlayer()));
+    final Optional<Game> updatedGame = gameRepository.update(new Game("someId", "name", getGenericPlayer(), eventPublisher, playerConverter));
     assertThat(updatedGame)
       .isNotPresent();
   }

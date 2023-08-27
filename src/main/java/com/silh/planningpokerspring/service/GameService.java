@@ -28,11 +28,10 @@ public interface GameService {
    *
    * @param gameId   - id of the game to which user should be added.
    * @param playerId - ID of a player who wants to join.
-   * @return - true if player was added, false otherwise.
    */
-  boolean joinGame(String gameId, String playerId);
+  void joinGame(String gameId, String playerId);
 
-  boolean leaveGame(String gameId, String playerId);
+  void leaveGame(String gameId, String playerId);
 
   /**
    * Move game to a new stage.
@@ -40,9 +39,8 @@ public interface GameService {
    * @param gameId    - ID of the game that should be moved.
    * @param personId  - who tries to move the game.
    * @param nextState - state to which game should be moved.
-   * @return - true if game was moved to a new state, false otherwise.
    */
-  boolean transitionTo(String gameId, String personId, GameState nextState);
+  void transitionTo(String gameId, String personId, GameState nextState);
 
   /**
    * Added players vote.
@@ -50,9 +48,8 @@ public interface GameService {
    * @param gameId  - ID of the game in which user tries to cast a vote.
    * @param voterId - ID of the voter.
    * @param value   - value of the cast vote.
-   * @return - true if vote was added, false otherwise.
    */
-  boolean vote(String gameId, String voterId, String value);
+  void vote(String gameId, String voterId, String value);
 
   /**
    * Get current game state.

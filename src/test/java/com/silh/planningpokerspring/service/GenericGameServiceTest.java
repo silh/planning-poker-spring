@@ -32,15 +32,13 @@ class GenericGameServiceTest {
   private final GenericGameService gameService = new GenericGameService(
     mockGameRepository,
     mockUserRepository,
-    new GameConverterImpl(playerConverter),
-    playerConverter,
-    eventPublisher
+    new GameConverterImpl(playerConverter)
   );
 
   @Test
   void canCreateGame() {
     final Player creator = new Player("1", "2");
-    final Game createdGame = new Game("id", "name", creator);
+    final Game createdGame = createGame("id", creator);
     when(mockGameRepository.create("name", creator)).thenReturn(createdGame);
     when(mockUserRepository.find(creator.id())).thenReturn(Optional.of(creator));
 
@@ -51,7 +49,7 @@ class GenericGameServiceTest {
   @Test
   void canGetAGame() {
     final Player creator = new Player("1", "2");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     when(mockGameRepository.find(expectedGame.getId())).thenReturn(Optional.of(expectedGame));
 
     final Optional<GameDto> result = gameService.getGame(expectedGame.getId());
@@ -71,13 +69,12 @@ class GenericGameServiceTest {
   @Test
   void canJoinGame() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     final Player player = new Player("2", "2");
     when(mockGameRepository.find(expectedGame.getId())).thenReturn(Optional.of(expectedGame));
     when(mockUserRepository.find(player.id())).thenReturn(Optional.of(player));
 
-    final boolean joined = gameService.joinGame(expectedGame.getId(), player.id());
-    assertThat(joined).isTrue();
+    gameService.joinGame(expectedGame.getId(), player.id());
     assertThat(expectedGame.getPlayers()).containsEntry("2", player);
   }
 
@@ -88,44 +85,40 @@ class GenericGameServiceTest {
     when(mockGameRepository.find(gameId)).thenReturn(Optional.empty());
     when(mockUserRepository.find(player.id())).thenReturn(Optional.of(player));
 
-    final boolean joined = gameService.joinGame(gameId, player.id());
-    assertThat(joined).isFalse();
+    gameService.joinGame(gameId, player.id());
   }
 
   @Test
   void creatorCanTransitionGameToAnotherStage() { // TODO at the moment any player can transition
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
 
     final GameState nextState = GameState.VOTING;
-    final boolean transitioned =
-      gameService.transitionTo(expectedGame.getId(), creator.id(), nextState);
-    assertThat(transitioned).isTrue();
+    gameService.transitionTo(expectedGame.getId(), creator.id(), nextState);
     assertThat(expectedGame.getState()).isEqualTo(nextState);
   }
 
   @Test
   void transitionFromVotingStateRevealsVotingResults() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     when(mockUserRepository.find(creator.id()))
       .thenReturn(Optional.of(creator));
     when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
 
-    assertThat(gameService.joinGame(expectedGame.getId(), creator.id())).isTrue();
+    gameService.joinGame(expectedGame.getId(), creator.id());
     GameState nextState = GameState.VOTING;
-    assertThat(gameService.transitionTo(expectedGame.getId(), creator.id(), nextState)).isTrue();
+    gameService.transitionTo(expectedGame.getId(), creator.id(), nextState);
     assertThat(expectedGame.getState()).isEqualTo(nextState);
 
-    final boolean updated = gameService.vote(expectedGame.getId(), creator.id(), "1");
-    assertThat(updated).isTrue();
+    gameService.vote(expectedGame.getId(), creator.id(), "1");
     assertThat(expectedGame.getVotes()).containsEntry(creator.id(), "*");
 
     nextState = GameState.DISCUSSION;
-    assertThat(gameService.transitionTo(expectedGame.getId(), creator.id(), nextState)).isTrue();
+    gameService.transitionTo(expectedGame.getId(), creator.id(), nextState);
     assertThat(expectedGame.getState()).isEqualTo(nextState);
     assertThat(expectedGame.getVotes()).containsEntry(creator.id(), "1");
   }
@@ -133,7 +126,7 @@ class GenericGameServiceTest {
   @Test
   void canVoteInVotingState() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     final Player voter = new Player("2", "voter");
     expectedGame.addParticipant(voter);
     when(mockGameRepository.find(expectedGame.getId()))
@@ -141,8 +134,7 @@ class GenericGameServiceTest {
 
     gameService.transitionTo(expectedGame.getId(), voter.id(), GameState.VOTING);
 
-    final boolean updated = gameService.vote(expectedGame.getId(), voter.id(), "1");
-    assertThat(updated).isTrue();
+    gameService.vote(expectedGame.getId(), voter.id(), "1");
     assertThat(expectedGame.getVotes()).containsEntry(voter.id(), "*");
   }
 
@@ -150,7 +142,7 @@ class GenericGameServiceTest {
   @ValueSource(strings = {"NOT_STARTED", "DISCUSSION", "FINISHED"})
   void cannotVoteInNonVotingState(GameState targetState) {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     final Player voter = new Player("2", "voter");
     expectedGame.addParticipant(voter);
     when(mockGameRepository.find(expectedGame.getId()))
@@ -158,28 +150,26 @@ class GenericGameServiceTest {
 
     gameService.transitionTo(expectedGame.getId(), voter.id(), targetState);
 
-    final boolean updated = gameService.vote(expectedGame.getId(), voter.id(), "1");
-    assertThat(updated).isFalse();
+    gameService.vote(expectedGame.getId(), voter.id(), "1");
     assertThat(expectedGame.getVotes()).isEmpty();
   }
 
   @Test
   void cantVoteIfNotParticipant() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     final Player voter = new Player("2", "voter");
     when(mockGameRepository.find(expectedGame.getId()))
       .thenReturn(Optional.of(expectedGame));
 
-    final boolean updated = gameService.vote(expectedGame.getId(), voter.id(), "1");
-    assertThat(updated).isFalse();
+    gameService.vote(expectedGame.getId(), voter.id(), "1");
     assertThat(expectedGame.getVotes()).doesNotContainKey(voter.id());
   }
 
   @Test
   void canGetGames() {
     final Player creator = new Player("1", "1");
-    final Game expectedGame = new Game("id", "name", creator);
+    final Game expectedGame = createGame("id", creator);
     when((mockGameRepository.findAll())).thenReturn(List.of(expectedGame));
 
     List<GameDto> actualGames = gameService.getGames();
@@ -187,7 +177,7 @@ class GenericGameServiceTest {
     isGameDtoEqualToGame(actualGames.get(0), expectedGame);
 
     final Player creator2 = new Player("2", "1");
-    final Game expectedGame2 = new Game("id2", "name", creator2);
+    final Game expectedGame2 = createGame("id2", creator2);
     when((mockGameRepository.findAll())).thenReturn(List.of(expectedGame, expectedGame2));
     actualGames = gameService.getGames();
     assertThat(actualGames).hasSize(2);
@@ -206,5 +196,9 @@ class GenericGameServiceTest {
       .collect(Collectors.toMap(Map.Entry::getKey, entry -> new PlayerDto(entry.getValue().id(), entry.getValue().id())));
     assertThat(dto.players()).isEqualTo(participants);
     assertThat(dto.votes()).isEqualTo(game.getVotes());
+  }
+
+  private Game createGame(String id, Player creator) {
+    return new Game(id, "name", creator, eventPublisher, playerConverter, Runnable::run);
   }
 }
