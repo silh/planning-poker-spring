@@ -16,9 +16,11 @@ import java.util.stream.Collectors;
 public class GameConverterImpl implements GameConverter {
 
   private final PlayerConverter playerConverter;
+  private final RoundResultConverter roundResultConverter;
 
-  public GameConverterImpl(PlayerConverter playerConverter) {
+  public GameConverterImpl(PlayerConverter playerConverter, RoundResultConverter roundResultConverter) {
     this.playerConverter = playerConverter;
+    this.roundResultConverter = roundResultConverter;
   }
 
   @Override
@@ -33,7 +35,11 @@ public class GameConverterImpl implements GameConverter {
       playerConverter.convert(game.getCreator()),
       game.getState(),
       convertParticipants(game),
-      game.getVotes()
+      game.getVotes(),
+      game.getHistory()
+        .stream()
+        .map(roundResultConverter::convert)
+        .collect(Collectors.toList())
     );
   }
 

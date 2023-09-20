@@ -2,6 +2,7 @@ package com.silh.planningpokerspring.service;
 
 import com.silh.planningpokerspring.converter.GameConverterImpl;
 import com.silh.planningpokerspring.converter.PlayerConverter;
+import com.silh.planningpokerspring.converter.RoundResultConverter;
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.GameState;
 import com.silh.planningpokerspring.domain.Player;
@@ -29,10 +30,11 @@ class GenericGameServiceTest {
   private final UserRepository mockUserRepository = mock(UserRepository.class);
   private final ApplicationEventPublisher eventPublisher = mock(ApplicationEventPublisher.class);
   private final PlayerConverter playerConverter = new PlayerConverter();
+  private final RoundResultConverter roundResultConverter = new RoundResultConverter(playerConverter);
   private final GenericGameService gameService = new GenericGameService(
     mockGameRepository,
     mockUserRepository,
-    new GameConverterImpl(playerConverter)
+    new GameConverterImpl(playerConverter, roundResultConverter)
   );
 
   @Test
@@ -199,6 +201,6 @@ class GenericGameServiceTest {
   }
 
   private Game createGame(String id, Player creator) {
-    return new Game(id, "name", creator, eventPublisher, playerConverter, Runnable::run);
+    return new Game(id, "name", creator, eventPublisher, playerConverter, roundResultConverter, Runnable::run);
   }
 }

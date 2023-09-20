@@ -32,7 +32,10 @@ import org.springframework.web.socket.client.standard.StandardWebSocketClient;
 import org.springframework.web.socket.handler.TextWebSocketHandler;
 
 import java.io.IOException;
-import java.util.concurrent.*;
+import java.util.concurrent.ArrayBlockingQueue;
+import java.util.concurrent.CompletableFuture;
+import java.util.concurrent.ExecutionException;
+import java.util.concurrent.TimeoutException;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
@@ -120,7 +123,8 @@ class PlanningPokerSpringApplicationTests {
       ongoingGame.creator(),
       nextState,
       ongoingGame.players(),
-      ongoingGame.votes()
+      ongoingGame.votes(),
+      ongoingGame.history()
     );
     assertThat(transitionEvent)
       .isEqualTo(new TransitionEvent(ongoingGame.id(), nextState, ongoingGame.votes()));

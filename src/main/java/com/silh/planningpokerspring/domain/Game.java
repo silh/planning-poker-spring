@@ -1,15 +1,15 @@
 package com.silh.planningpokerspring.domain;
 
 import com.silh.planningpokerspring.converter.PlayerConverter;
-import com.silh.planningpokerspring.service.events.PlayerJoinedEvent;
-import com.silh.planningpokerspring.service.events.PlayerLeftEvent;
-import com.silh.planningpokerspring.service.events.TransitionEvent;
-import com.silh.planningpokerspring.service.events.VoteEvent;
+import com.silh.planningpokerspring.converter.RoundResultConverter;
+import com.silh.planningpokerspring.service.events.*;
 import lombok.Data;
 import org.springframework.context.ApplicationEventPublisher;
 
 import java.time.Instant;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.concurrent.Executor;
 import java.util.concurrent.Executors;
@@ -24,6 +24,8 @@ public class Game {
   private final Map<String, String> votes = new HashMap<>();
   private final ApplicationEventPublisher eventPublisher; // TODO this is not async...
   private final PlayerConverter playerConverter;
+  private final RoundResultConverter roundResultConverter;
+  private final List<RoundResult> history = new ArrayList<>();
 
   private final Instant createdAt = Instant.now();
   private final Executor executor;
@@ -34,14 +36,15 @@ public class Game {
     String name,
     Player creator,
     ApplicationEventPublisher eventPublisher,
-    PlayerConverter playerConverter
-  ) {
+    PlayerConverter playerConverter,
+    RoundResultConverter roundResultConverter) {
     this(
       id,
       name,
       creator,
       eventPublisher,
       playerConverter,
+      roundResultConverter,
       Executors.newSingleThreadExecutor(Thread.ofVirtual().factory())
     );
   }
@@ -52,13 +55,14 @@ public class Game {
     Player creator,
     ApplicationEventPublisher eventPublisher,
     PlayerConverter playerConverter,
-    Executor executor // Used in tests
+    RoundResultConverter roundResultConverter, Executor executor // Used in tests
   ) {
     this.creator = creator;
     this.name = name;
     this.id = id;
     this.eventPublisher = eventPublisher;
     this.playerConverter = playerConverter;
+    this.roundResultConverter = roundResultConverter;
     this.executor = executor;
   }
 
@@ -69,7 +73,14 @@ public class Game {
    */
   public void transitionTo(GameState nextState) {
     executor.execute(() -> {
-      // Simple implementation, transition to any state is possible.
+      // Simple implementation, transition to any state is possible
+      // If we are transitioning from discussion - save results
+      // TODO simplify check when proper transition flow is implemented
+      if (this.state == GameState.DISCUSSION && nextState == GameState.NOT_STARTED) {
+        RoundResult roundResult = new RoundResult(new HashMap<>(players), new HashMap<>(votes));
+        this.history.add(roundResult);
+        this.eventPublisher.publishEvent(new RoundFinishedEvent(this.id, this.roundResultConverter.convert(roundResult)));
+      }
       this.state = nextState;
       if (nextState == GameState.VOTING
         || nextState == GameState.NOT_STARTED) {

@@ -2,6 +2,7 @@ package com.silh.planningpokerspring.request;
 
 import com.silh.planningpokerspring.domain.GameState;
 
+import java.util.List;
 import java.util.Map;
 
 /**
@@ -13,6 +14,7 @@ public record GameDto(
   PlayerDto creator,
   GameState state,
   Map<String, PlayerDto> players,
-  Map<String, String> votes
+  Map<String, String> votes,
+  List<RoundResultDto> history
 ) {
 }

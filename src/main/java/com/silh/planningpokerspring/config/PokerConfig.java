@@ -5,6 +5,7 @@ import com.silh.planningpokerspring.controller.GameWsHandler;
 import com.silh.planningpokerspring.converter.GameConverter;
 import com.silh.planningpokerspring.converter.GameConverterImpl;
 import com.silh.planningpokerspring.converter.PlayerConverter;
+import com.silh.planningpokerspring.converter.RoundResultConverter;
 import com.silh.planningpokerspring.repository.GameRepository;
 import com.silh.planningpokerspring.repository.HashMapGameRepository;
 import com.silh.planningpokerspring.repository.UserRepository;
@@ -44,17 +45,23 @@ public class PokerConfig {
   }
 
   @Bean
-  public GameConverter gameConverter(PlayerConverter playerConverter) {
-    return new GameConverterImpl(playerConverter);
+  public RoundResultConverter roundResultConverter(PlayerConverter playerConverter) {
+    return new RoundResultConverter(playerConverter);
+  }
+
+  @Bean
+  public GameConverter gameConverter(PlayerConverter playerConverter, RoundResultConverter roundResultConverter) {
+    return new GameConverterImpl(playerConverter, roundResultConverter);
   }
 
   @Bean
   public GameRepository gameRepository(
     StringIdGenerator idGenerator,
     ApplicationEventPublisher eventPublisher,
-    PlayerConverter playerConverter
+    PlayerConverter playerConverter,
+    RoundResultConverter roundResultConverter
   ) {
-    return new HashMapGameRepository(idGenerator, eventPublisher, playerConverter);
+    return new HashMapGameRepository(idGenerator, eventPublisher, playerConverter, roundResultConverter);
   }
 
   @Bean

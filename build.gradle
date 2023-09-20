@@ -1,12 +1,12 @@
 plugins {
-  id 'org.springframework.boot' version '3.0.6'
-  id 'io.spring.dependency-management' version '1.1.0'
+  id 'org.springframework.boot' version '3.1.3'
+  id 'io.spring.dependency-management' version '1.1.3'
   id 'java'
 }
 
 group = 'com.silh'
-version = '0.0.3-SNAPSHOT'
-sourceCompatibility = '20'
+version = '0.0.4-SNAPSHOT'
+sourceCompatibility = '21'
 
 configurations {
   compileOnly {
@@ -36,9 +36,10 @@ dependencies {
   implementation 'org.springframework.session:spring-session-core'
   implementation "org.hashids:hashids:$hashidsVersion"
   implementation "com.google.code.findbugs:jsr305:$findBugsVersion"
+  implementation("io.micrometer:micrometer-registry-prometheus")
 
-  compileOnly 'org.projectlombok:lombok'
-  annotationProcessor 'org.projectlombok:lombok'
+  compileOnly 'org.projectlombok:lombok:1.18.30'
+  annotationProcessor 'org.projectlombok:lombok:1.18.30'
 
   testImplementation('org.springframework.boot:spring-boot-starter-test') {
     exclude group: 'org.junit.vintage', module: 'junit-vintage-engine'

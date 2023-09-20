@@ -1,6 +1,7 @@
 package com.silh.planningpokerspring.repository;
 
 import com.silh.planningpokerspring.converter.PlayerConverter;
+import com.silh.planningpokerspring.converter.RoundResultConverter;
 import com.silh.planningpokerspring.domain.Game;
 import com.silh.planningpokerspring.domain.Player;
 import com.silh.planningpokerspring.service.StringIdGenerator;
@@ -19,17 +20,20 @@ public class HashMapGameRepository implements GameRepository {
 
   private final ConcurrentMap<String, Game> games = new ConcurrentHashMap<>();
   private final StringIdGenerator idGenerator;
-  // TODO The bellow 2 are just to create games, change to factory?
+  // TODO The bellow 3 are just to create games, change to factory?
   private final ApplicationEventPublisher eventPublisher;
   private final PlayerConverter playerConverter;
+  private final RoundResultConverter roundResultConverter;
 
   public HashMapGameRepository(
     StringIdGenerator idGenerator,
     ApplicationEventPublisher eventPublisher,
-    PlayerConverter playerConverter) {
+    PlayerConverter playerConverter,
+    RoundResultConverter roundResultConverter) {
     this.idGenerator = idGenerator;
     this.eventPublisher = eventPublisher;
     this.playerConverter = playerConverter;
+    this.roundResultConverter = roundResultConverter;
   }
 
   @Override
@@ -73,7 +77,7 @@ public class HashMapGameRepository implements GameRepository {
     Game oldGame;
     do {
       final String newId = idGenerator.generate();
-      game = new Game(newId, gameName, creator, eventPublisher, playerConverter);
+      game = new Game(newId, gameName, creator, eventPublisher, playerConverter, roundResultConverter);
       oldGame = games.putIfAbsent(newId, game);
     } while (oldGame != null);
     return game;
